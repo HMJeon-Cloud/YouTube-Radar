@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>떡상 레이더 v1.1</title>
+<style>
+:root{
+  --bg:#0f0f0f; --card:#1c1c1e; --card2:#272729; --line:#333336;
+  --txt:#f1f1f1; --sub:#aaaaae; --dim:#77777c;
+  --red:#ff3347; --amber:#ffb02e; --green:#2ecc8f; --blue:#4da3ff;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--txt);font-family:'Apple SD Gothic Neo','Malgun Gothic',system-ui,sans-serif;font-size:14px;line-height:1.5}
+.wrap{max-width:1080px;margin:0 auto;padding:0 16px 60px}
+
+/* 헤더 */
+header{position:sticky;top:0;z-index:10;background:rgba(15,15,15,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.hbar{max-width:1080px;margin:0 auto;padding:12px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.logo{font-size:18px;font-weight:800;letter-spacing:-.5px}
+.logo b{color:var(--red)}
+.quota{margin-left:auto;background:var(--card);border:1px solid var(--line);border-radius:20px;padding:5px 14px;font-size:12px;color:var(--sub)}
+.quota b{color:var(--txt);font-variant-numeric:tabular-nums}
+.quota .warn{color:var(--amber)}
+
+/* API 키 */
+.keybox{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin:16px 0;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.keybox label{font-size:12px;color:var(--sub);white-space:nowrap}
+.keybox input{flex:1;min-width:200px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px 12px;color:var(--txt);font-size:13px}
+.keybox input:focus{outline:none;border-color:var(--blue)}
+.keyok{font-size:12px;color:var(--green);display:none}
+
+/* 탭 */
+.tabs{display:flex;gap:6px;margin:8px 0 16px;border-bottom:1px solid var(--line)}
+.tab{background:none;border:none;color:var(--sub);font-size:14px;font-weight:600;padding:10px 14px;cursor:pointer;border-bottom:2px solid transparent;font-family:inherit}
+.tab.on{color:var(--txt);border-bottom-color:var(--red)}
+.tab:hover{color:var(--txt)}
+
+/* 필터 */
+.filters{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+.fld{display:flex;flex-direction:column;gap:4px}
+.fld label{font-size:11px;color:var(--dim);font-weight:600}
+.fld input,.fld select{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;color:var(--txt);font-size:13px;font-family:inherit}
+.fld input:focus,.fld select:focus{outline:none;border-color:var(--blue)}
+.btn{background:var(--red);border:none;color:#fff;font-weight:700;font-size:13px;padding:10px 18px;border-radius:8px;cursor:pointer;font-family:inherit;transition:opacity .15s}
+.btn:hover{opacity:.85}
+.btn:disabled{background:var(--line);color:var(--dim);cursor:not-allowed}
+.btn.sec{background:var(--card2);color:var(--txt);border:1px solid var(--line)}
+.cost{font-size:11px;color:var(--dim);align-self:center}
+.cost b{color:var(--amber)}
+
+/* 상태 */
+.status{padding:30px;text-align:center;color:var(--sub);font-size:13px}
+.status.err{color:var(--red)}
+.cachetag{display:inline-block;font-size:11px;color:var(--green);border:1px solid var(--green);border-radius:12px;padding:2px 10px;margin-bottom:12px}
+
+/* 카드 그리드 */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;display:flex;flex-direction:column;transition:transform .15s,border-color .15s}
+.card:hover{transform:translateY(-2px);border-color:#555}
+.thumb{position:relative;aspect-ratio:16/9;background:#000}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.ratio{position:absolute;top:8px;left:8px;font-weight:800;font-size:14px;padding:3px 10px;border-radius:8px;color:#fff;font-variant-numeric:tabular-nums;box-shadow:0 2px 8px rgba(0,0,0,.5)}
+.r-hot{background:var(--red)} .r-good{background:var(--amber);color:#1a1a1a} .r-ok{background:var(--green);color:#0a2a1e} .r-low{background:#555}
+.dur{position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,.8);font-size:11px;padding:1px 6px;border-radius:4px}
+.cbody{padding:12px;display:flex;flex-direction:column;gap:6px;flex:1}
+.ctitle{font-size:13px;font-weight:600;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.ctitle a{color:var(--txt);text-decoration:none}
+.ctitle a:hover{color:var(--blue)}
+.cchan{font-size:12px;color:var(--sub)}
+.cstats{display:flex;gap:10px;font-size:11px;color:var(--dim);margin-top:auto;flex-wrap:wrap}
+.cstats b{color:var(--sub);font-weight:600}
+.ctags{display:flex;gap:4px;flex-wrap:wrap;margin-top:4px}
+.ctags span{font-size:10px;background:var(--card2);color:var(--sub);border-radius:10px;padding:1px 8px}
+
+/* 태그 분석 */
+.tagcloud{display:flex;gap:8px;flex-wrap:wrap;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px}
+.tagchip{background:var(--card2);border:1px solid var(--line);border-radius:20px;padding:6px 14px;font-size:13px;color:var(--txt)}
+.tagchip b{color:var(--red);margin-left:5px;font-variant-numeric:tabular-nums}
+.taghint{color:var(--dim);font-size:12px;margin-bottom:12px}
+
+/* 관심 주제 */
+.topicbar{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:16px}
+.topichdr{font-size:12px;font-weight:700;color:var(--sub);margin-bottom:10px}
+.topicchips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.tchip{display:inline-flex;align-items:center;gap:6px;background:var(--card2);border:1px solid var(--line);border-radius:20px;padding:6px 6px 6px 14px;font-size:13px;color:var(--txt);cursor:pointer;transition:border-color .15s}
+.tchip:hover{border-color:var(--red)}
+.tchip .x{width:18px;height:18px;border-radius:50%;background:var(--bg);color:var(--dim);font-size:12px;display:inline-flex;align-items:center;justify-content:center;line-height:1}
+.tchip .x:hover{background:var(--red);color:#fff}
+.topicadd{display:flex;gap:8px;flex-wrap:wrap}
+.topicadd input{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;color:var(--txt);font-size:13px;font-family:inherit}
+.topicadd input:focus{outline:none;border-color:var(--blue)}
+.sortbar{display:flex;gap:8px;margin-bottom:12px;align-items:center;font-size:12px;color:var(--dim);flex-wrap:wrap}
+.sortbar select{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:6px 10px;color:var(--txt);font-family:inherit;font-size:12px}
+@media(max-width:600px){.grid{grid-template-columns:repeat(auto-fill,minmax(160px,1fr))}}
+</style>
+</head>
+<body>
+<header><div class="hbar">
+  <div class="logo">떡상 <b>레이더</b> <span style="font-size:11px;color:var(--dim);font-weight:400">v1.1</span></div>
+  <div class="quota">오늘 사용 쿼터 <b id="qUsed">0</b> / 10,000 유닛 <span id="qWarn"></span></div>
+</div></header>
+
+<div class="wrap">
+  <div class="keybox">
+    <label>YouTube API 키</label>
+    <input type="password" id="apiKey" placeholder="AIza... 로 시작하는 API 키 입력" autocomplete="off">
+    <button class="btn sec" onclick="saveKey()">저장</button>
+    <span class="keyok" id="keyOk">✓ 저장됨 (탭 닫으면 초기화)</span>
+  </div>
+
+  <div class="tabs">
+    <button class="tab on" data-t="trend" onclick="switchTab('trend')">🔥 인기 급상승</button>
+    <button class="tab" data-t="hidden" onclick="switchTab('hidden')">💎 떡상 발굴</button>
+    <button class="tab" data-t="tags" onclick="switchTab('tags')">🏷 태그 분석</button>
+  </div>
+
+  <!-- 탭1: 인기 급상승 -->
+  <section id="tab-trend">
+    <div class="filters">
+      <div class="fld"><label>카테고리</label>
+        <select id="trCat">
+          <option value="">전체</option><option value="10">음악</option><option value="20">게임</option>
+          <option value="17">스포츠</option><option value="24">엔터테인먼트</option><option value="25">뉴스/정치</option>
+          <option value="26">노하우/스타일</option><option value="28">과학기술</option><option value="22">인물/블로그</option>
+          <option value="27">교육</option><option value="23">코미디</option><option value="1">영화/애니</option>
+          <option value="2">자동차</option><option value="15">동물</option><option value="19">여행/이벤트</option>
+        </select></div>
+      <div class="fld"><label>&nbsp;</label><span style="font-size:11px;color:var(--dim);align-self:center">※ 유튜브 공식 카테고리만 선택 가능 (주식·부동산 등은 아래 [떡상 발굴] 탭의 주제 사용)</span></div>
+      <button class="btn" onclick="loadTrending()">인기 영상 불러오기</button>
+      <span class="cost">예상 비용 <b>2유닛</b> (영상 1 + 채널 1)</span>
+    </div>
+    <div id="trOut"><div class="status">API 키 저장 후 [인기 영상 불러오기]를 누르세요. 한국 인기 급상승 50개를 배율(조회수÷구독자)과 함께 보여줍니다.</div></div>
+  </section>
+
+  <!-- 탭2: 떡상 발굴 -->
+  <section id="tab-hidden" style="display:none">
+    <div class="topicbar">
+      <div class="topichdr">관심 주제 <span style="color:var(--dim);font-weight:400">— 클릭하면 바로 검색</span></div>
+      <div class="topicchips" id="topicChips"></div>
+      <div class="topicadd">
+        <input id="newTopicName" placeholder="주제 이름 (예: 부동산)" style="width:130px">
+        <input id="newTopicQ" placeholder="검색어 (예: 부동산 투자 갭투자)" style="width:220px">
+        <button class="btn sec" onclick="addTopic()">+ 주제 추가</button>
+      </div>
+    </div>
+    <div class="filters">
+      <div class="fld"><label>키워드</label><input id="hdQ" placeholder="예: 축구 브이로그" style="width:180px"></div>
+      <div class="fld"><label>업로드 기간</label>
+        <select id="hdDays"><option value="7">최근 7일</option><option value="30" selected>최근 30일</option><option value="90">최근 90일</option></select></div>
+      <div class="fld"><label>구독자 상한</label>
+        <select id="hdSubMax"><option value="10000">1만 이하</option><option value="50000" selected>5만 이하</option><option value="100000">10만 이하</option><option value="0">제한 없음</option></select></div>
+      <div class="fld"><label>최소 조회수</label>
+        <select id="hdViewMin"><option value="1000">1천</option><option value="10000" selected>1만</option><option value="100000">10만</option></select></div>
+      <button class="btn" onclick="searchHidden()">떡상 영상 검색</button>
+      <span class="cost">예상 비용 <b>약 102유닛</b> (검색 100 + 상세 2)</span>
+    </div>
+    <div class="sortbar">정렬
+      <select id="hdSort" onchange="renderHidden()">
+        <option value="ratio">배율 높은 순</option><option value="views">조회수 순</option><option value="date">최신 순</option>
+      </select>
+      <span id="hdCount"></span>
+    </div>
+    <div id="hdOut"><div class="status">구독자는 적은데 조회수가 터진 영상을 찾습니다. 배율 = 조회수 ÷ 구독자 수. 쿼터를 아끼려면 같은 조건 재검색 시 30분간 캐시를 재사용합니다.</div></div>
+  </section>
+
+  <!-- 탭3: 태그 분석 -->
+  <section id="tab-tags" style="display:none">
+    <div class="taghint">마지막으로 불러온 영상 목록(급상승 또는 떡상 검색 결과)의 태그를 집계합니다. 추가 쿼터 소모 없음 (0유닛).</div>
+    <div id="tagOut"><div class="status">먼저 다른 탭에서 영상을 불러오세요.</div></div>
+  </section>
+</div>
+
+<script>
+// =====================================================================
+//  관심 주제 프리셋 — 여기만 편집하면 원하는 만큼 주제를 추가할 수 있습니다.
+//  {name:'화면에 보일 이름', q:'실제 유튜브 검색어 (띄어쓰기로 여러 단어)'}
+// =====================================================================
+var TOPIC_PRESETS = [
+  {name:'주식',     q:'주식 투자 종목분석'},
+  {name:'투자/재테크', q:'재테크 자산관리 투자'},
+  {name:'부동산',   q:'부동산 투자 아파트'},
+  {name:'코인',     q:'코인 비트코인 암호화폐'},
+  {name:'경제뉴스', q:'경제 뉴스 금리'},
+  {name:'축구',     q:'아마추어 축구 풋살'}
+];
+// =====================================================================
+
+// ===== 상태 =====
+var API='', quotaUsed=0;
+var cache={};            // key -> {t:timestamp, data}
+var CACHE_TTL=30*60*1000; // 30분
+var lastVideos=[];        // 태그 분석용 마지막 결과
+var hiddenResults=[];
+
+function saveKey(){
+  API=document.getElementById('apiKey').value.trim();
+  if(API){document.getElementById('keyOk').style.display='inline';}
+}
+function addQuota(n){
+  quotaUsed+=n;
+  document.getElementById('qUsed').textContent=quotaUsed.toLocaleString();
+  document.getElementById('qWarn').innerHTML=quotaUsed>8000?'<span class="warn">⚠ 한도 임박</span>':'';
+}
+function switchTab(t){
+  ['trend','hidden','tags'].forEach(function(x){
+    document.getElementById('tab-'+x).style.display=(x===t)?'':'none';
+    document.querySelector('.tab[data-t="'+x+'"]').classList.toggle('on',x===t);
+  });
+  if(t==='tags') renderTags();
+}
+
+// ===== 관심 주제 관리 =====
+// 프리셋 + 사용자가 추가한 주제를 합쳐서 사용. 사용자 추가분은 브라우저에 저장 시도.
+var LS_KEY='ttoksang_topics_v1';
+function loadUserTopics(){
+  try{var raw=localStorage.getItem(LS_KEY);return raw?JSON.parse(raw):[];}catch(e){return window._memTopics||[];}
+}
+function saveUserTopics(list){
+  try{localStorage.setItem(LS_KEY,JSON.stringify(list));}catch(e){window._memTopics=list;}
+}
+function allTopics(){return TOPIC_PRESETS.concat(loadUserTopics());}
+function renderTopics(){
+  var box=document.getElementById('topicChips');
+  var user=loadUserTopics();
+  var html=TOPIC_PRESETS.map(function(tp){
+    return '<span class="tchip" onclick="runTopic(\''+encodeURIComponent(tp.q)+'\')">'+esc(tp.name)+'</span>';
+  }).join('');
+  html+=user.map(function(tp,i){
+    return '<span class="tchip"><span onclick="runTopic(\''+encodeURIComponent(tp.q)+'\')">'+esc(tp.name)+'</span>'
+      +'<span class="x" title="삭제" onclick="delTopic('+i+')">×</span></span>';
+  }).join('');
+  box.innerHTML=html;
+}
+function runTopic(encq){
+  document.getElementById('hdQ').value=decodeURIComponent(encq);
+  searchHidden();
+}
+function addTopic(){
+  var name=document.getElementById('newTopicName').value.trim();
+  var q=document.getElementById('newTopicQ').value.trim();
+  if(!name||!q){alert('주제 이름과 검색어를 모두 입력하세요.');return;}
+  var user=loadUserTopics();
+  user.push({name:name,q:q});
+  saveUserTopics(user);
+  document.getElementById('newTopicName').value='';
+  document.getElementById('newTopicQ').value='';
+  renderTopics();
+}
+function delTopic(i){
+  var user=loadUserTopics();
+  user.splice(i,1);
+  saveUserTopics(user);
+  renderTopics();
+}
+
+// ===== API 호출 (캐시 + 쿼터 계산 내장) =====
+function yt(endpoint,params,cost){
+  var qs=new URLSearchParams(params); qs.set('key',API);
+  var url='https://www.googleapis.com/youtube/v3/'+endpoint+'?'+qs.toString();
+  var ckey=endpoint+'?'+new URLSearchParams(params).toString();
+  var hit=cache[ckey];
+  if(hit && Date.now()-hit.t<CACHE_TTL){
+    return Promise.resolve({data:hit.data,cached:true});
+  }
+  return fetch(url).then(function(r){return r.json();}).then(function(d){
+    if(d.error){throw new Error(d.error.message||'API 오류');}
+    addQuota(cost);
+    cache[ckey]={t:Date.now(),data:d};
+    return {data:d,cached:false};
+  });
+}
+
+// ===== 유틸 =====
+function fmt(n){
+  n=parseInt(n||0);
+  if(n>=100000000) return (n/100000000).toFixed(1)+'억';
+  if(n>=10000) return (n/10000).toFixed(1)+'만';
+  if(n>=1000) return (n/1000).toFixed(1)+'천';
+  return n.toLocaleString();
+}
+function ratioBadge(r){
+  if(r>=10) return '<span class="ratio r-hot">×'+r.toFixed(1)+'</span>';
+  if(r>=3)  return '<span class="ratio r-good">×'+r.toFixed(1)+'</span>';
+  if(r>=1)  return '<span class="ratio r-ok">×'+r.toFixed(1)+'</span>';
+  return '<span class="ratio r-low">×'+r.toFixed(1)+'</span>';
+}
+function daysAgo(iso){
+  var d=Math.floor((Date.now()-new Date(iso))/86400000);
+  return d===0?'오늘':d+'일 전';
+}
+function esc(s){var d=document.createElement('div');d.textContent=s||'';return d.innerHTML;}
+
+function card(v){
+  var st=v.statistics||{}, sn=v.snippet||{};
+  var views=parseInt(st.viewCount||0), subs=v._subs||0;
+  var ratio=subs>0?views/subs:0;
+  var tags=(sn.tags||[]).slice(0,3).map(function(t){return '<span>#'+esc(t)+'</span>';}).join('');
+  return '<div class="card">'
+    +'<div class="thumb"><img loading="lazy" src="'+(sn.thumbnails&&sn.thumbnails.medium?sn.thumbnails.medium.url:'')+'" alt="">'
+    +ratioBadge(ratio)+'</div>'
+    +'<div class="cbody">'
+    +'<div class="ctitle"><a href="https://www.youtube.com/watch?v='+v.id+'" target="_blank" rel="noopener">'+esc(sn.title)+'</a></div>'
+    +'<div class="cchan">'+esc(sn.channelTitle)+' · 구독 '+fmt(subs)+'</div>'
+    +'<div class="cstats"><span>조회 <b>'+fmt(views)+'</b></span><span>좋아요 <b>'+fmt(st.likeCount)+'</b></span><span>댓글 <b>'+fmt(st.commentCount)+'</b></span><span>'+daysAgo(sn.publishedAt)+'</span></div>'
+    +'<div class="ctags">'+tags+'</div>'
+    +'</div></div>';
+}
+
+// 채널 구독자 수를 영상 목록에 병합 (배치: 50개씩 1유닛)
+function attachSubs(videos){
+  var chIds=Array.from(new Set(videos.map(function(v){return v.snippet.channelId;})));
+  var batches=[];
+  for(var i=0;i<chIds.length;i+=50) batches.push(chIds.slice(i,i+50));
+  return Promise.all(batches.map(function(b){
+    return yt('channels',{part:'statistics',id:b.join(','),maxResults:'50'},1);
+  })).then(function(results){
+    var map={};
+    results.forEach(function(r){(r.data.items||[]).forEach(function(c){map[c.id]=parseInt(c.statistics.subscriberCount||0);});});
+    videos.forEach(function(v){v._subs=map[v.snippet.channelId]||0;});
+    return videos;
+  });
+}
+
+// ===== 탭1: 인기 급상승 =====
+function loadTrending(){
+  if(!API){alert('먼저 API 키를 저장하세요.');return;}
+  var out=document.getElementById('trOut');
+  out.innerHTML='<div class="status">불러오는 중…</div>';
+  var p={part:'snippet,statistics,contentDetails',chart:'mostPopular',regionCode:'KR',maxResults:'50'};
+  var cat=document.getElementById('trCat').value;
+  if(cat) p.videoCategoryId=cat;
+  var wasCached=false;
+  yt('videos',p,1).then(function(r){
+    wasCached=r.cached;
+    return attachSubs(r.data.items||[]);
+  }).then(function(vids){
+    lastVideos=vids;
+    vids.sort(function(a,b){
+      var ra=a._subs>0?a.statistics.viewCount/a._subs:0, rb=b._subs>0?b.statistics.viewCount/b._subs:0;
+      return rb-ra;
+    });
+    out.innerHTML=(wasCached?'<div class="cachetag">✓ 캐시 사용 (쿼터 0)</div>':'')
+      +'<div class="grid">'+vids.map(card).join('')+'</div>';
+  }).catch(function(e){out.innerHTML='<div class="status err">오류: '+esc(e.message)+'</div>';});
+}
+
+// ===== 탭2: 떡상 발굴 =====
+function searchHidden(){
+  if(!API){alert('먼저 API 키를 저장하세요.');return;}
+  var q=document.getElementById('hdQ').value.trim();
+  if(!q){alert('키워드를 입력하세요.');return;}
+  var out=document.getElementById('hdOut');
+  out.innerHTML='<div class="status">검색 중… (검색 100유닛 + 상세 조회)</div>';
+  var days=parseInt(document.getElementById('hdDays').value);
+  var after=new Date(Date.now()-days*86400000).toISOString();
+  var wasCached=false;
+  yt('search',{part:'snippet',q:q,type:'video',order:'viewCount',publishedAfter:after,regionCode:'KR',relevanceLanguage:'ko',maxResults:'50'},100)
+  .then(function(r){
+    wasCached=r.cached;
+    var ids=(r.data.items||[]).map(function(it){return it.id.videoId;}).filter(Boolean);
+    if(!ids.length) throw new Error('검색 결과가 없습니다.');
+    return yt('videos',{part:'snippet,statistics',id:ids.join(','),maxResults:'50'},1);
+  })
+  .then(function(r){return attachSubs(r.data.items||[]);})
+  .then(function(vids){
+    var subMax=parseInt(document.getElementById('hdSubMax').value);
+    var viewMin=parseInt(document.getElementById('hdViewMin').value);
+    hiddenResults=vids.filter(function(v){
+      var views=parseInt(v.statistics.viewCount||0);
+      if(views<viewMin) return false;
+      if(subMax>0 && v._subs>subMax) return false;
+      return true;
+    });
+    lastVideos=vids;
+    document.getElementById('hdCount').textContent='필터 통과 '+hiddenResults.length+'개 / 전체 '+vids.length+'개';
+    if(wasCached){out.dataset.cached='1';}else{delete out.dataset.cached;}
+    renderHidden();
+  })
+  .catch(function(e){out.innerHTML='<div class="status err">오류: '+esc(e.message)+'</div>';});
+}
+function renderHidden(){
+  var out=document.getElementById('hdOut');
+  if(!hiddenResults.length){out.innerHTML='<div class="status">조건에 맞는 영상이 없습니다. 구독자 상한을 높이거나 최소 조회수를 낮춰보세요.</div>';return;}
+  var s=document.getElementById('hdSort').value;
+  var list=hiddenResults.slice();
+  if(s==='ratio') list.sort(function(a,b){return (b._subs>0?b.statistics.viewCount/b._subs:0)-(a._subs>0?a.statistics.viewCount/a._subs:0);});
+  if(s==='views') list.sort(function(a,b){return b.statistics.viewCount-a.statistics.viewCount;});
+  if(s==='date') list.sort(function(a,b){return new Date(b.snippet.publishedAt)-new Date(a.snippet.publishedAt);});
+  out.innerHTML=(out.dataset.cached?'<div class="cachetag">✓ 캐시 사용 (쿼터 0)</div>':'')
+    +'<div class="grid">'+list.map(card).join('')+'</div>';
+}
+
+// ===== 탭3: 태그 분석 =====
+function renderTags(){
+  var out=document.getElementById('tagOut');
+  if(!lastVideos.length){out.innerHTML='<div class="status">먼저 다른 탭에서 영상을 불러오세요.</div>';return;}
+  var count={};
+  lastVideos.forEach(function(v){(v.snippet.tags||[]).forEach(function(t){t=t.toLowerCase();count[t]=(count[t]||0)+1;});});
+  var sorted=Object.keys(count).map(function(k){return [k,count[k]];})
+    .sort(function(a,b){return b[1]-a[1];}).slice(0,40);
+  if(!sorted.length){out.innerHTML='<div class="status">태그가 있는 영상이 없습니다.</div>';return;}
+  out.innerHTML='<div class="tagcloud">'+sorted.map(function(p){
+    return '<span class="tagchip">#'+esc(p[0])+'<b>'+p[1]+'</b></span>';
+  }).join('')+'</div>';
+}
+
+// ===== 초기화 =====
+renderTopics();
+</script>
+</body>
+</html>
