@@ -774,6 +774,7 @@ function openModal(vid){
   var allTags=sn.tags||[];
   window._modalTags=allTags.join(', ');
   var thumbUrl=sn.thumbnails?(sn.thumbnails.maxres?sn.thumbnails.maxres.url:(sn.thumbnails.high?sn.thumbnails.high.url:sn.thumbnails.medium.url)):'';
+  window._modalInsta=JSON.stringify({source:'ytradar',videoId:v.id,title:sn.title,channel:sn.channelTitle,publishedAt:sn.publishedAt,views:views,subs:v._subs,ratio:+ratio.toFixed(1),perf:+perf.toFixed(1),daily:Math.round(daily),engage:+engage.toFixed(2),tags:allTags,thumb:thumbUrl});
   document.getElementById('modalBox').innerHTML=
     '<button class="mclose" onclick="closeModal()">✕</button>'
     +'<img src="'+thumbUrl+'" alt="">'
@@ -791,6 +792,7 @@ function openModal(vid){
     +(allTags.length?'<div class="institle">태그 '+allTags.length+'개</div><div class="mtags">'+allTags.map(function(t){return '<span>#'+esc(t)+'</span>';}).join('')+'</div>':'<div class="institle" style="margin-bottom:14px">등록된 태그 없음</div>')
     +'<div class="mact">'
     +(allTags.length?'<button class="btn sec" onclick="copyTags(this)">태그 전체 복사</button>':'')
+    +'<button class="btn sec" onclick="copyInsta(this)">📸 인스타 소재 복사</button>'
     +'<a class="btn" style="text-decoration:none" href="https://www.youtube.com/watch?v='+v.id+'" target="_blank" rel="noopener">유튜브에서 보기</a>'
     +'</div></div>';
   document.getElementById('modal').classList.add('show');
@@ -799,6 +801,13 @@ function closeModal(){document.getElementById('modal').classList.remove('show');
 function copyTags(btn){
   var txt=window._modalTags||'';
   function done(){btn.textContent='✓ 복사됨';setTimeout(function(){btn.textContent='태그 전체 복사';},1500);}
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(done).catch(function(){fallbackCopy(txt,done);});
+  }else{fallbackCopy(txt,done);}
+}
+function copyInsta(btn){
+  var txt=window._modalInsta||'';
+  function done(){btn.textContent='✓ 복사됨 → Insta Studio에 붙여넣기';setTimeout(function(){btn.textContent='📸 인스타 소재 복사';},2500);}
   if(navigator.clipboard&&navigator.clipboard.writeText){
     navigator.clipboard.writeText(txt).then(done).catch(function(){fallbackCopy(txt,done);});
   }else{fallbackCopy(txt,done);}

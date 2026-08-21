@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Insta Studio — 유튜브 소재로 인스타 콘텐츠 만들기</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+:root{
+  --bg:#0e0f12; --panel:#17181c; --panel2:#1d1f24; --bd:#26282e;
+  --tx:#e8e9ec; --mut:#8b8f98; --acc:#ff3b4e; --info:#4da3ff; --gold:#f2b843; --ok:#3ecf8e;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--tx);font-family:'Pretendard Variable',Pretendard,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;line-height:1.55}
+.wrap{max-width:1180px;margin:0 auto;padding:20px 16px 80px}
+header{display:flex;align-items:baseline;gap:10px;padding:6px 2px 18px}
+header h1{font-size:22px;font-weight:800;letter-spacing:-.4px}
+header h1 b{color:var(--acc)}
+header .ver{color:var(--mut);font-size:12px}
+.grid{display:grid;grid-template-columns:430px 1fr;gap:16px}
+@media(max-width:960px){.grid{grid-template-columns:1fr}}
+.panel{background:var(--panel);border:1px solid var(--bd);border-radius:14px;padding:16px;margin-bottom:16px}
+.ptitle{font-size:14px;font-weight:800;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.ptitle .step{background:var(--acc);color:#fff;font-size:11px;font-weight:800;border-radius:6px;padding:2px 7px}
+label{display:block;font-size:12px;color:var(--mut);margin:10px 0 5px;font-weight:600}
+input[type=text],input[type=password],textarea,select{
+  width:100%;background:var(--panel2);border:1px solid var(--bd);border-radius:9px;
+  color:var(--tx);padding:9px 11px;font-size:13px;font-family:inherit;outline:none}
+input:focus,textarea:focus,select:focus{border-color:var(--info)}
+textarea{resize:vertical;min-height:64px}
+.row{display:flex;gap:8px}
+.row>*{flex:1}
+.btn{background:var(--acc);color:#fff;border:none;border-radius:9px;padding:10px 16px;
+  font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
+.btn:hover{filter:brightness(1.12)}
+.btn.sec{background:var(--panel2);border:1px solid var(--bd);color:var(--tx)}
+.btn.sm{padding:6px 11px;font-size:12px}
+.btn:disabled{opacity:.45;cursor:default}
+.fnote{font-size:11.5px;color:var(--mut);margin-top:7px}
+.fnote b{color:var(--gold)}
+.srcbox{background:var(--panel2);border:1px dashed var(--bd);border-radius:10px;padding:10px 12px;font-size:12.5px;color:var(--mut);margin-top:8px;display:none}
+.srcbox.show{display:block}
+.srcbox .t{color:var(--tx);font-weight:700;font-size:13px;margin-bottom:3px}
+.srcbox .badge{display:inline-block;background:rgba(255,59,78,.14);color:var(--acc);font-weight:800;border-radius:6px;padding:1px 7px;font-size:11.5px;margin-right:5px}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg button{background:var(--panel2);border:1px solid var(--bd);color:var(--mut);border-radius:8px;padding:7px 12px;font-size:12.5px;cursor:pointer;font-family:inherit;font-weight:600}
+.seg button.on{border-color:var(--acc);color:var(--tx);background:rgba(255,59,78,.10)}
+.genbar{display:flex;gap:8px;margin-top:14px}
+.genbar .btn{flex:1;padding:12px}
+.spin{display:none;text-align:center;color:var(--mut);font-size:13px;padding:10px}
+.spin.show{display:block}
+/* preview */
+.strip{display:flex;gap:10px;overflow-x:auto;padding:4px 2px 10px}
+.strip .th{flex:0 0 auto;width:96px;height:120px;border-radius:9px;border:2px solid var(--bd);cursor:pointer;overflow:hidden;background:#000}
+.strip .th.on{border-color:var(--acc)}
+.strip .th canvas{width:100%;height:100%;display:block}
+.stage{background:var(--panel2);border:1px solid var(--bd);border-radius:12px;padding:14px;text-align:center}
+.stage canvas{width:100%;max-width:420px;border-radius:8px;box-shadow:0 8px 30px rgba(0,0,0,.5)}
+.editbox{margin-top:12px;text-align:left}
+.dlbar{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;justify-content:center}
+.outbox{background:var(--panel2);border:1px solid var(--bd);border-radius:10px;padding:12px;font-size:13px;white-space:pre-wrap;margin-top:8px;max-height:280px;overflow-y:auto}
+.copyline{display:flex;justify-content:space-between;align-items:center;margin-top:14px}
+.copyline h3{font-size:13.5px;font-weight:800}
+.empty{color:var(--mut);font-size:13px;text-align:center;padding:40px 10px}
+.hidden{display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header><h1>Insta <b>Studio</b></h1><span class="ver">v1.0 — YouTube Radar 연동 · 카드뉴스 / 캡션 / 쇼츠 대본</span></header>
+
+<div class="grid">
+<!-- ============ LEFT: INPUT ============ -->
+<div>
+  <div class="panel">
+    <div class="ptitle"><span class="step">1</span>소재 불러오기</div>
+    <label>YouTube Radar에서 복사한 JSON 붙여넣기 (영상 상세 → 📸 인스타 소재 복사)</label>
+    <textarea id="srcJson" placeholder='{"source":"ytradar","title":"...",...}'></textarea>
+    <div style="margin-top:8px"><button class="btn sec sm" onclick="loadSrc()">소재 불러오기</button></div>
+    <div class="srcbox" id="srcInfo"></div>
+    <label style="margin-top:14px">또는 직접 입력 — 영상 제목 / 주제</label>
+    <input type="text" id="mTitle" placeholder="예: 2026년 인불동 아파트, 지금 사도 될까?">
+    <label>태그 (쉼표 구분)</label>
+    <input type="text" id="mTags" placeholder="부동산, 아파트, 투자, 서울, 집값">
+  </div>
+
+  <div class="panel">
+    <div class="ptitle"><span class="step">2</span>내 메시지</div>
+    <label>핵심 포인트 — 이 콘텐츠에서 하고 싶은 말 (줄바꿈으로 여러 개)</label>
+    <textarea id="myPoints" style="min-height:90px" placeholder="예:
+신축 아파트가 30년 구축보다 위험한 3가지 이유
+공급 물량 데이터를 보면 답이 나온다
+결론: 입지 > 연식"></textarea>
+    <div class="row">
+      <div>
+        <label>톤</label>
+        <select id="tone">
+          <option value="info">정보형 (데이터·팩트 중심)</option>
+          <option value="opinion">의견형 (내 관점 제시)</option>
+          <option value="question">질문형 (댓글 유도)</option>
+        </select>
+      </div>
+      <div>
+        <label>본문 카드 수</label>
+        <select id="cardN"><option>3</option><option selected>4</option><option>5</option></select>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="ptitle"><span class="step">3</span>홍보 설정</div>
+    <div class="row">
+      <div><label>앱/서비스 이름</label><input type="text" id="promoName" value="TrackAPT"></div>
+      <div><label>URL</label><input type="text" id="promoUrl" value="track-apt.vercel.app"></div>
+    </div>
+    <label>한 줄 소개</label>
+    <input type="text" id="promoDesc" value="아파트 실거래가·공급물량을 한눈에 보는 무료 분석 도구">
+    <label>홍보 강도</label>
+    <div class="seg" id="promoSeg">
+      <button data-v="none">없음</button>
+      <button data-v="soft" class="on">은은하게 (마지막 카드·캡션 끝)</button>
+      <button data-v="direct">직접 (본문에 자연스럽게 언급)</button>
+    </div>
+    <div class="fnote">설정은 브라우저에 저장돼서 다음에도 유지됩니다.</div>
+  </div>
+
+  <div class="panel">
+    <div class="ptitle"><span class="step">4</span>생성</div>
+    <label>Anthropic API 키 (선택 — 있으면 AI가 글을 씀, 없으면 템플릿 모드)</label>
+    <input type="password" id="aiKey" placeholder="sk-ant-...">
+    <div class="genbar">
+      <button class="btn" onclick="generate(true)">✨ AI로 생성</button>
+      <button class="btn sec" onclick="generate(false)">템플릿으로 생성</button>
+    </div>
+    <div class="spin" id="spin">AI가 카드뉴스·캡션·쇼츠 대본을 쓰는 중… (5~15초)</div>
+    <div class="fnote">AI 모드는 카드 문구·캡션·해시태그·쇼츠 대본을 한 번에 작성합니다. 키는 이 브라우저에만 저장됩니다.</div>
+  </div>
+</div>
+
+<!-- ============ RIGHT: OUTPUT ============ -->
+<div>
+  <div class="panel" id="outPanel">
+    <div class="ptitle">🖼 카드뉴스 미리보기 <span style="margin-left:auto"></span>
+      <span class="seg" id="themeSeg" style="margin-left:auto">
+        <button data-v="charcoal" class="on">차콜</button>
+        <button data-v="navy">네이비</button>
+        <button data-v="ivory">아이보리</button>
+      </span>
+    </div>
+    <div class="empty" id="emptyMsg">왼쪽에서 소재를 넣고 <b>생성</b>을 누르면 여기에 카드뉴스가 나타납니다.<br><br>결과물: 카드 이미지 PNG (1080×1350) · 인스타 캡션 · 해시태그 · 쇼츠 대본</div>
+    <div id="outArea" class="hidden">
+      <div class="strip" id="strip"></div>
+      <div class="stage"><canvas id="mainCv" width="1080" height="1350"></canvas>
+        <div class="editbox">
+          <label>이 카드의 텍스트 편집 (제목 ↵ 본문)</label>
+          <textarea id="cardEdit" oninput="editCard()"></textarea>
+        </div>
+        <div class="dlbar">
+          <button class="btn sec sm" onclick="dlOne()">이 카드 PNG 저장</button>
+          <button class="btn sm" onclick="dlAll()">전체 카드 PNG 저장</button>
+        </div>
+      </div>
+
+      <div class="copyline"><h3>📝 인스타 캡션</h3><button class="btn sec sm" onclick="copyBox('capBox',this)">복사</button></div>
+      <div class="outbox" id="capBox" contenteditable="true"></div>
+
+      <div class="copyline"><h3>#️⃣ 해시태그</h3><button class="btn sec sm" onclick="copyBox('tagBox',this)">복사</button></div>
+      <div class="outbox" id="tagBox" contenteditable="true"></div>
+
+      <div class="copyline"><h3>🎬 쇼츠 대본 (30~45초)</h3><button class="btn sec sm" onclick="copyBox('shortsBox',this)">복사</button></div>
+      <div class="outbox" id="shortsBox" contenteditable="true"></div>
+    </div>
+  </div>
+</div>
+</div>
+</div>
+
+<script>
+// ===== state =====
+var S = { src:null, cards:[], caption:'', hashtags:'', shorts:'', theme:'charcoal', sel:0, promo:'soft' };
+var LS='instastudio_v1';
+
+function $(id){return document.getElementById(id);}
+
+// ===== settings persistence =====
+function saveCfg(){
+  try{localStorage.setItem(LS,JSON.stringify({
+    key:$('aiKey').value, name:$('promoName').value, url:$('promoUrl').value,
+    desc:$('promoDesc').value, promo:S.promo
+  }));}catch(e){}
+}
+function loadCfg(){
+  try{
+    var c=JSON.parse(localStorage.getItem(LS)||'{}');
+    if(c.key)$('aiKey').value=c.key;
+    if(c.name)$('promoName').value=c.name;
+    if(c.url)$('promoUrl').value=c.url;
+    if(c.desc)$('promoDesc').value=c.desc;
+    if(c.promo){S.promo=c.promo;segSet('promoSeg',c.promo);}
+  }catch(e){}
+}
+['aiKey','promoName','promoUrl','promoDesc'].forEach(function(id){
+  document.addEventListener('DOMContentLoaded',function(){$(id).addEventListener('change',saveCfg);});
+});
+
+// ===== segmented controls =====
+function segSet(segId,v){
+  var btns=$(segId).querySelectorAll('button');
+  for(var i=0;i<btns.length;i++)btns[i].classList.toggle('on',btns[i].getAttribute('data-v')===v);
+}
+$('promoSeg').addEventListener('click',function(e){
+  var b=e.target.closest('button'); if(!b)return;
+  S.promo=b.getAttribute('data-v'); segSet('promoSeg',S.promo); saveCfg();
+});
+$('themeSeg').addEventListener('click',function(e){
+  var b=e.target.closest('button'); if(!b)return;
+  S.theme=b.getAttribute('data-v'); segSet('themeSeg',S.theme); renderAll();
+});
+
+// ===== source loading =====
+function fmt(n){
+  n=parseInt(n||0);
+  if(n>=100000000)return (n/100000000).toFixed(1).replace(/\.0$/,'')+'억';
+  if(n>=10000)return (n/10000).toFixed(1).replace(/\.0$/,'')+'만';
+  return n.toLocaleString('ko-KR');
+}
+function loadSrc(){
+  var t=$('srcJson').value.trim();
+  if(!t){alert('Radar에서 복사한 JSON을 먼저 붙여넣어 주세요.');return;}
+  try{
+    var o=JSON.parse(t);
+    S.src=o;
+    $('mTitle').value=o.title||'';
+    $('mTags').value=(o.tags||[]).slice(0,10).join(', ');
+    var el=$('srcInfo');
+    el.className='srcbox show';
+    el.innerHTML='<div class="t">'+escH(o.title||'')+'</div>'
+      +'<span class="badge">×'+(o.ratio||'-')+'</span>'
+      +escH(o.channel||'')+' · 조회 '+fmt(o.views)+' · 구독 '+fmt(o.subs)
+      +(o.perf?' · 성과도 ×'+o.perf:'');
+  }catch(e){alert('JSON 형식이 올바르지 않습니다: '+e.message);}
+}
+function escH(s){var d=document.createElement('div');d.textContent=s||'';return d.innerHTML;}
+
+// ===== content generation =====
+function getInput(){
+  var pts=$('myPoints').value.split('\n').map(function(s){return s.trim();}).filter(Boolean);
+  return {
+    title:$('mTitle').value.trim(),
+    tags:$('mTags').value.split(',').map(function(s){return s.trim();}).filter(Boolean),
+    points:pts, tone:$('tone').value, n:parseInt($('cardN').value),
+    promo:{mode:S.promo,name:$('promoName').value.trim(),url:$('promoUrl').value.trim(),desc:$('promoDesc').value.trim()},
+    src:S.src
+  };
+}
+
+function generate(useAI){
+  var inp=getInput();
+  if(!inp.title&&!inp.points.length){alert('소재(제목) 또는 핵심 포인트를 입력해 주세요.');return;}
+  saveCfg();
+  if(useAI){ genAI(inp); } else { applyResult(genTemplate(inp)); }
+}
+
+// --- template mode (no API) ---
+function genTemplate(inp){
+  var hook=inp.points[0]||inp.title||'오늘의 인사이트';
+  var cards=[];
+  cards.push({type:'cover',title:hook,body:(inp.src?'조회수 '+fmt(inp.src.views)+' · 화제의 주제':'주식·부동산 인사이트')});
+  var body=inp.points.slice(1);
+  if(!body.length&&inp.title)body=[inp.title];
+  for(var i=0;i<Math.min(inp.n,Math.max(1,body.length));i++){
+    cards.push({type:'body',title:(i+1)+'. '+body[i%body.length].slice(0,30),body:body[i%body.length]});
+  }
+  var ctaBody = inp.promo.mode==='none' ? '팔로우하면 매주 인사이트를 보내드립니다'
+    : '저는 '+inp.promo.name+'('+inp.promo.url+')로 데이터를 직접 확인합니다\n'+inp.promo.desc;
+  cards.push({type:'cta',title:'오늘의 결론',body:(inp.points[inp.points.length-1]||hook)+'\n\n'+ctaBody});
+  var cap=hook+'\n\n'+inp.points.slice(1).map(function(p){return '✔ '+p;}).join('\n')
+    +(inp.tone==='question'?'\n\n여러분 생각은 어떠세요? 댓글로 남겨주세요 👇':'')
+    +(inp.promo.mode!=='none'?'\n\n📊 데이터 출처는 제가 만든 '+inp.promo.name+' ('+inp.promo.url+')':'');
+  var tags=inp.tags.map(function(t){return '#'+t.replace(/\s/g,'');});
+  ['#재테크','#부동산','#주식','#경제공부','#투자'].forEach(function(t){if(tags.indexOf(t)===-1)tags.push(t);});
+  var shorts='[쇼츠 대본 — 템플릿]\n0-3초 (훅): "'+hook+'"\n'
+    +inp.points.slice(1).map(function(p,i){return (4+i*8)+'초: '+p;}).join('\n')
+    +'\n마지막 3초: 팔로우 + '+(inp.promo.mode!=='none'?inp.promo.name+' 검색':''); 
+  return {cards:cards,caption:cap,hashtags:tags.slice(0,20).join(' '),shorts:shorts};
+}
+
+// --- AI mode ---
+function genAI(inp){
+  $('spin').classList.add('show');
+  var key=$('aiKey').value.trim();
+  var promoRule = inp.promo.mode==='none' ? '홍보 문구는 넣지 마.'
+    : inp.promo.mode==='soft'
+    ? '마지막 CTA 카드와 캡션 맨 끝에만 "'+inp.promo.name+' ('+inp.promo.url+') — '+inp.promo.desc+'"를 광고 티 안 나게, 내가 직접 쓰는 도구를 소개하는 톤으로 한 줄 넣어.'
+    : '본문 중 데이터 언급 지점에서 "'+inp.promo.name+'에서 확인한 데이터" 식으로 자연스럽게 1회, CTA 카드에서 1회 언급해. 과장 광고 금지.';
+  var toneRule={info:'데이터와 팩트 중심, 담백하게.',opinion:'내 관점을 분명히 제시하는 1인칭 톤.',question:'독자에게 질문을 던져 댓글을 유도하는 톤.'}[inp.tone];
+  var prompt='너는 주식·부동산 인스타그램 카드뉴스 전문 작가야. 아래 소재로 한국어 콘텐츠를 만들어.\n\n'
+    +'[소재]\n제목: '+inp.title+'\n'
+    +(inp.src?('유튜브 성과: 조회 '+inp.src.views+', 구독자 '+inp.src.subs+', 배율 ×'+inp.src.ratio+'\n'):'')
+    +'태그: '+inp.tags.join(', ')+'\n'
+    +'[내가 하고 싶은 말]\n'+(inp.points.join('\n')||'(소재 제목을 바탕으로 알아서 구성)')+'\n\n'
+    +'[규칙]\n- 톤: '+toneRule+'\n- '+promoRule+'\n'
+    +'- 카드뉴스: 표지 1장 + 본문 '+inp.n+'장 + CTA 1장. 표지 title은 15자 이내 강력한 훅, 본문 title은 짧은 소제목, body는 카드당 2~3문장(70자 이내).\n'
+    +'- 캡션: 첫 줄 훅 + 본문 요약 + 이모지 적당히. 해시태그는 별도 필드.\n'
+    +'- 쇼츠 대본: 30~45초, 장면별 초 표시 + 내레이션 + 화면 지시.\n'
+    +'- 투자 조언 단정 금지("사라/팔아라" 대신 "데이터를 보면 ~로 해석 가능").\n\n'
+    +'아래 JSON만 출력해. 마크다운 백틱, 다른 텍스트 절대 금지:\n'
+    +'{"cards":[{"type":"cover|body|cta","title":"...","body":"..."}],"caption":"...","hashtags":"#a #b ...","shorts":"..."}';
+  var headers={'Content-Type':'application/json'};
+  if(key){headers['x-api-key']=key;headers['anthropic-version']='2023-06-01';headers['anthropic-dangerous-direct-browser-access']='true';}
+  fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',headers:headers,
+    body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:2500,messages:[{role:'user',content:prompt}]})
+  }).then(function(r){return r.json();}).then(function(d){
+    $('spin').classList.remove('show');
+    if(d.error){alert('API 오류: '+(d.error.message||JSON.stringify(d.error))+'\n\n템플릿 모드로 대신 생성할 수 있습니다.');return;}
+    var txt=(d.content||[]).map(function(c){return c.text||'';}).join('');
+    txt=txt.replace(/```json|```/g,'').trim();
+    try{
+      var o=JSON.parse(txt);
+      applyResult({cards:o.cards||[],caption:o.caption||'',hashtags:o.hashtags||'',shorts:o.shorts||''});
+    }catch(e){alert('AI 응답 파싱 실패. 다시 시도해 주세요.\n'+e.message);}
+  }).catch(function(e){
+    $('spin').classList.remove('show');
+    alert('요청 실패: '+e.message+'\nAPI 키를 확인하거나 템플릿 모드를 사용해 주세요.');
+  });
+}
+
+function applyResult(r){
+  S.cards=r.cards; S.caption=r.caption; S.hashtags=r.hashtags; S.shorts=r.shorts; S.sel=0;
+  $('emptyMsg').classList.add('hidden'); $('outArea').classList.remove('hidden');
+  $('capBox').textContent=r.caption; $('tagBox').textContent=r.hashtags; $('shortsBox').textContent=r.shorts;
+  renderAll();
+}
+
+// ===== canvas rendering =====
+var THEMES={
+  charcoal:{bg:'#111318',bg2:'#191c23',tx:'#f2f3f5',mut:'#9aa0ab',acc:'#ff3b4e',line:'#2a2e37'},
+  navy:{bg:'#0d1b2e',bg2:'#12233c',tx:'#eef3fa',mut:'#8fa3bd',acc:'#f2b843',line:'#1f3552'},
+  ivory:{bg:'#f6f3ec',bg2:'#efe9dd',tx:'#22252b',mut:'#7a7f88',acc:'#c0392b',line:'#ddd5c5'}
+};
+function wrap(ctx,text,maxW){
+  var lines=[];
+  text.split('\n').forEach(function(para){
+    var cur='';
+    for(var i=0;i<para.length;i++){
+      var test=cur+para[i];
+      if(ctx.measureText(test).width>maxW&&cur){lines.push(cur);cur=para[i];}
+      else cur=test;
+    }
+    lines.push(cur);
+  });
+  return lines;
+}
+function drawCard(cv,card,idx,total){
+  var c=cv.getContext('2d'), T=THEMES[S.theme], W=1080,H=1350,P=90;
+  c.fillStyle=T.bg;c.fillRect(0,0,W,H);
+  // subtle top band
+  c.fillStyle=T.bg2;c.fillRect(0,0,W,10);
+  c.fillStyle=T.acc;c.fillRect(0,0,Math.round(W*(idx+1)/total),10);
+  var ff='"Pretendard Variable",Pretendard,"Apple SD Gothic Neo","Malgun Gothic",sans-serif';
+  // eyebrow
+  c.fillStyle=T.acc;c.font='700 34px '+ff;
+  var eyebrow = card.type==='cover'?'INSIGHT':(card.type==='cta'?'WRAP-UP':('POINT '+idx));
+  c.fillText(eyebrow,P,170);
+  c.strokeStyle=T.line;c.lineWidth=3;
+  c.beginPath();c.moveTo(P,200);c.lineTo(W-P,200);c.stroke();
+  // title
+  var tSize=card.type==='cover'?92:66;
+  c.fillStyle=T.tx;c.font='800 '+tSize+'px '+ff;
+  var tl=wrap(c,card.title||'',W-P*2), y=card.type==='cover'?H*0.36:330;
+  tl.forEach(function(ln){c.fillText(ln,P,y);y+=tSize*1.28;});
+  // body
+  y+=30;
+  c.fillStyle=card.type==='cover'?T.mut:T.tx;
+  var bSize=card.type==='cover'?40:46;
+  c.font=(card.type==='cover'?'500 ':'400 ')+bSize+'px '+ff;
+  wrap(c,card.body||'',W-P*2).forEach(function(ln){c.fillText(ln,P,y);y+=bSize*1.55;});
+  // footer
+  c.fillStyle=T.mut;c.font='600 30px '+ff;
+  var handle='@'+($('promoName').value.trim().toLowerCase()||'myaccount');
+  c.fillText(handle,P,H-80);
+  c.textAlign='right';c.fillText(idx+1+' / '+total,W-P,H-80);c.textAlign='left';
+  // CTA accent block
+  if(card.type==='cta'&&S.promo!=='none'){
+    c.fillStyle=T.acc;c.fillRect(P,H-190,64,8);
+  }
+}
+function renderAll(){
+  if(!S.cards.length)return;
+  var strip=$('strip');strip.innerHTML='';
+  S.cards.forEach(function(card,i){
+    var d=document.createElement('div');d.className='th'+(i===S.sel?' on':'');
+    var cv=document.createElement('canvas');cv.width=270;cv.height=338;
+    d.appendChild(cv);d.onclick=function(){S.sel=i;renderAll();};
+    strip.appendChild(d);
+    // draw scaled
+    var full=document.createElement('canvas');full.width=1080;full.height=1350;
+    drawCard(full,card,i,S.cards.length);
+    cv.getContext('2d').drawImage(full,0,0,270,338);
+  });
+  drawCard($('mainCv'),S.cards[S.sel],S.sel,S.cards.length);
+  var cd=S.cards[S.sel];
+  $('cardEdit').value=(cd.title||'')+'\n'+(cd.body||'');
+}
+function editCard(){
+  var v=$('cardEdit').value.split('\n');
+  S.cards[S.sel].title=v[0]||'';
+  S.cards[S.sel].body=v.slice(1).join('\n');
+  drawCard($('mainCv'),S.cards[S.sel],S.sel,S.cards.length);
+}
+function dlOne(){
+  var a=document.createElement('a');
+  a.download='insta_card_'+(S.sel+1)+'.png';
+  a.href=$('mainCv').toDataURL('image/png');a.click();
+}
+function dlAll(){
+  S.cards.forEach(function(card,i){
+    setTimeout(function(){
+      var cv=document.createElement('canvas');cv.width=1080;cv.height=1350;
+      drawCard(cv,card,i,S.cards.length);
+      var a=document.createElement('a');
+      a.download='insta_card_'+(i+1)+'.png';a.href=cv.toDataURL('image/png');a.click();
+    },i*450);
+  });
+}
+function copyBox(id,btn){
+  var txt=$(id).innerText;
+  function done(){var o=btn.textContent;btn.textContent='✓ 복사됨';setTimeout(function(){btn.textContent=o;},1500);}
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(done);
+  }else{
+    var ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();
+    try{document.execCommand('copy');done();}catch(e){}
+    document.body.removeChild(ta);
+  }
+}
+loadCfg();
+if(document.fonts&&document.fonts.ready)document.fonts.ready.then(function(){if(S.cards.length)renderAll();});
+</script>
+</body>
+</html>
