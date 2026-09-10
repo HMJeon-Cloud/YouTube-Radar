@@ -335,7 +335,7 @@ svg.chart{width:100%;display:block;overflow:visible}
 <div class="wrap">
 
 <nav class="nav">
-  <span class="logo"><i></i>아웃라이어 파인더<span class="ver">v4.2</span></span>
+  <span class="logo"><i></i>아웃라이어 파인더<span class="ver">v4.3</span></span>
   <div class="tabs">
     <button class="tab" id="tabWatch" onclick="switchTab('watch')">① 워치리스트 <span class="tabdot" id="dotWatch">0</span></button>
     <button class="tab" id="tabScout" onclick="switchTab('scout')">② 후보 발굴 <span class="tabdot" id="dotQueue">0</span></button>
@@ -558,6 +558,8 @@ svg.chart{width:100%;display:block;overflow:visible}
   </div>
 </section>
 
+<section class="card" id="bootstrapBox" style="display:none;border-color:var(--arc)"></section>
+
 <section class="card">
   <div class="eyebrow">1 · 승격 큐<span class="sp">승인한 채널만 워치리스트에 들어갑니다</span></div>
   <h2 class="sec">자동으로 넣지 않습니다</h2>
@@ -601,6 +603,13 @@ svg.chart{width:100%;display:block;overflow:visible}
     </ul>
   </div>
   <div class="row" style="margin-top:16px">
+    <div class="fg"><label class="fl">조사 범위</label>
+      <select id="reScope" onchange="updReScope()">
+        <option value="all" selected>후보 풀 전체</option>
+        <option value="mine">이 프로필로 채굴한 채널만</option>
+      </select>
+      <span class="fh" id="reScopeNote"></span>
+    </div>
     <div class="fg"><label class="fl">구독자 범위</label>
       <select id="reSubs">
         <option value="1000,100000" selected>1천 ~ 10만 (기본)</option>
@@ -661,9 +670,18 @@ svg.chart{width:100%;display:block;overflow:visible}
       </select>
       <span class="fh">조회수순은 이미 큰 채널이 상위를 채웁니다. 작은 채널을 찾으려면 최신순</span>
     </div>
+    <div class="fg"><label class="fl">영상 길이</label>
+      <select id="mineDur">
+        <option value="">전체</option>
+        <option value="short">짧은 영상 (4분 미만) — 쇼츠 채널 찾기</option>
+        <option value="medium">중간 (4~20분) — 롱폼 채널 찾기</option>
+        <option value="long">긴 영상 (20분 초과)</option>
+      </select>
+      <span class="fh" id="mineDurNote">프로필 형태에 맞춰 자동으로 잡힙니다. 검색 40회뿐이라 형태를 좁혀야 낭비가 없습니다</span>
+    </div>
     <div class="fg"><label class="fl">업로드 기간</label>
       <select id="minePeriod"><option value="30">30일</option><option value="90" selected>90일</option><option value="365">1년</option></select>
-      <span class="fh">지금 활동 중인 채널만 원하면 30일</span>
+      <span class="fh">지금 활동 중인 채널만 원하면 30일. 쇼츠는 회전이 빨라 30일 권장</span>
     </div>
     <div class="fg"><label class="fl">&nbsp;</label><button class="btn btn-ink" id="mineBtn" onclick="mine()">⛏ 채굴</button>
       <span class="fh">1~2분</span></div>
@@ -839,7 +857,7 @@ svg.chart{width:100%;display:block;overflow:visible}
 <div class="toast" id="toast"></div>
 <script>
 /* ══════════════════════════════════════════════════════════════════
-   아웃라이어 파인더 v4.2 — 워치리스트 · 다중 프로필
+   아웃라이어 파인더 v4.3 — 워치리스트 · 다중 프로필
    단일 index.html · HTML/CSS/Vanilla JS · 빌드 없음 · GitHub Pages
 
    v3.2에서 확인된 구조적 한계와 이번 판의 대응
@@ -1388,7 +1406,7 @@ async function switchProfile(pid){
   }catch(e){}
   await loadBoard();
   renderProfileBar();renderWatch();renderQueue();renderBoard();
-  applyPresetDefaults();applyFilters();updTopicNote();updMineCost();
+  applyPresetDefaults();applyFilters();updTopicNote();updMineCost();updReScope();
   toast(`${P().emoji} ${P().name} 프로필로 전환했습니다.`);
 }
 function renderProfileBar(){
@@ -1418,7 +1436,7 @@ function migrateV3(){
         vids:c.videoCount||0,
         up:c.uploadsPlaylist||'',
         seen:c.firstSeen||'',
-        src:'v3'
+        src:'v3',pid:'v3'
       };
     });
     savePool();
@@ -1436,7 +1454,8 @@ function savePool(){
   try{store(POOL_KEY,JSON.stringify(POOL));}catch(e){storageWarning();}
   const el=document.getElementById('poolCount');if(el)el.textContent=Object.keys(POOL).length.toLocaleString();
   const n=document.getElementById('poolNote');
-  if(n)n.textContent=`후보 풀 ${Object.keys(POOL).length.toLocaleString()}채널 보관 중`;
+  if(n)n.textContent=`후보 풀 ${Object.keys(POOL).length.toLocaleString()}채널 보관 중 (프로필 공유)`;
+  try{updReScope();}catch(e){}
 }
 function saveQueue(){
   const ids=Object.keys(QUEUE);
@@ -1928,6 +1947,7 @@ function renderQueue(){
     note.textContent=list.length?`대기 ${list.length} · 승격 가능 ${good} · 자동 차단 ${blocked} · 워치리스트 여유 ${Math.max(0,SET.watchCap-Object.keys(WL).length)}`:'';
   }
   const d=document.getElementById('dotQueue');if(d)d.textContent=list.length;
+  renderBootstrap();
 }
 function updWlStats(){
   const list=wlArray(), targets=scanTargets();
@@ -2454,6 +2474,53 @@ function updMineCost(){
   if(c)c.style.display=document.getElementById('mineSrc')?.value==='custom'?'block':'none';
   paintQuota();
 }
+/* 이 프로필로 채굴한 채널이 몇 개인지 세어 보여준다.
+   쇼핑 프로필로 투자 채널 3,353개를 2단계 정밀 조사하면 쿼터만 날린다. */
+function updReScope(){
+  const sel=document.getElementById('reScope'),note=document.getElementById('reScopeNote');
+  if(!sel||!note)return;
+  const all=Object.keys(POOL).filter(id=>!WL[id]&&!BLOCKED[id]);
+  const mine=all.filter(id=>POOL[id]?.pid===PID);
+  note.innerHTML=sel.value==='mine'
+    ? `이 프로필로 채굴한 <b>${mine.length.toLocaleString()}채널</b>만 조사합니다`
+    : `전체 <b>${all.length.toLocaleString()}채널</b> · 이 프로필 채굴분 ${mine.length.toLocaleString()}개`
+      +(mine.length<20&&all.length>=200
+        ? ` — 이 프로필로 모은 채널이 거의 없습니다. 2단계에서 약 ${(Math.min(all.length,1200)*2).toLocaleString()}유닛을 쓰고 대부분 주제 불일치로 걸러질 수 있어 쿼터가 낭비됩니다`
+        : '');
+  renderBootstrap();
+}
+/* 워치리스트가 빈 프로필에서 무엇부터 해야 하는지 화면이 판단해 알려준다 */
+function renderBootstrap(){
+  const box=document.getElementById('bootstrapBox');
+  if(!box)return;
+  if(wlArray().length>=10||Object.keys(QUEUE).length>0){box.style.display='none';return;}
+  const all=Object.keys(POOL).filter(id=>!WL[id]&&!BLOCKED[id]);
+  const mine=all.filter(id=>POOL[id]?.pid===PID);
+  const shorts=isShorts();
+  /* 이 프로필로 모은 채널이 없고, 풀이 다른 주제 것뿐이면 채굴이 먼저다 */
+  const minePath=mine.length<50&&(shorts||all.length<200);
+  box.style.display='block';
+  box.innerHTML=`<div class="eyebrow">시작 지점<span class="sp">${P().emoji} ${esc(P().name)} 프로필</span></div>
+    <h2 class="sec">이 프로필은 아직 비어 있습니다</h2>
+    ${minePath
+      ? `<p class="lead">후보 풀에 ${all.length.toLocaleString()}채널이 있지만 <b>이 프로필로 모은 건 ${mine.length}개</b>뿐입니다.
+         나머지는 다른 주제로 모은 채널이라 2단계 정밀 조사(채널당 2유닛)를 돌려도 대부분 주제 불일치로 걸러집니다.
+         <b>「2-B 채굴」부터 하세요.</b></p>
+         <div class="howto"><div class="ht">첫날 순서 — 검색 40회 · 일반 약 1,300유닛</div><ol>
+           <li>아래 <b>2-B 채굴</b> → 시드 <b>${shorts?'🛒 쇼핑·인기상품':'💰 투자·머니'}</b> / 키워드 <b>40개</b> / 정렬 <b>최신순</b> / 길이 <b>${shorts?'짧은 영상':'중간'}</b> / 기간 <b>${shorts?'30일':'90일'}</b></li>
+           <li>1~2분 뒤 승격 큐에 채널이 쌓입니다 (보통 200~500개)</li>
+           <li>위 <b>1 · 승격 큐</b>에서 「차단 대상 일괄 제거」 → 「적합도 60 이상 일괄 승인」</li>
+           <li>① 워치리스트 → 기간 <b>${shorts?'7일':'30일'}</b> → 전수 스캔</li>
+           <li>다음 날부터 채굴 20회씩 추가해 ${shorts?'200~300':'500~700'}채널까지 키웁니다</li>
+         </ol></div>`
+      : `<p class="lead">후보 풀에 <b>${all.length.toLocaleString()}채널</b>이 있습니다. <b>「2-A 재선별」부터 하세요</b> — 검색 쿼터를 쓰지 않고 이미 있는 채널에서 골라냅니다.</p>
+         <div class="howto"><div class="ht">첫날 순서 — 검색 0회 · 일반 약 2,500유닛</div><ol>
+           <li>아래 <b>2-A 재선별</b> → 조사 범위 <b>후보 풀 전체</b> / 2단계 <b>상위 1,200</b></li>
+           <li>승격 큐에서 「차단 대상 일괄 제거」 → 「적합도 60 이상 일괄 승인」</li>
+           <li>① 워치리스트 → 기간 <b>30일</b> → 전수 스캔</li>
+           <li>부족하면 <b>2-B 채굴</b>로 보충</li>
+         </ol></div>`}`;
+}
 async function mine(){
   hideErr();DIAG=[];
   if(!API_KEY){showErr('API 키를 먼저 저장해 주세요.');return;}
@@ -2474,9 +2541,13 @@ async function mine(){
       setProg('mineProg','mineStatus',`「${seeds[i]}」 검색 중 (${i+1}/${seeds.length}) · 새 채널 ${found.size}`,(i+1)/seeds.length*100);
       try{
         /* part=snippet이면 응답에 channelId가 들어 있어 videos.list 단계를 건너뛴다.
-           검색 1회 = 검색 버킷 1 (2026-06 이후 별도 버킷). */
+           검색 1회 = 검색 버킷 1 (2026-06 이후 별도 버킷).
+           videoDuration으로 형태를 미리 좁힌다 — 검색 40회밖에 없는데 쇼츠 프로필에서
+           롱폼 채널만 긁어오면 그 40회가 통째로 낭비된다. short=4분 미만 · medium=4~20분. */
+        const dur=document.getElementById('mineDur')?.value||'';
         const j=await apiGet('search',{part:'snippet',type:'video',q:seeds[i],order:ord,
-          maxResults:'50',regionCode:'KR',relevanceLanguage:'ko',publishedAfter:after},'search');
+          maxResults:'50',regionCode:'KR',relevanceLanguage:'ko',publishedAfter:after,
+          ...(dur?{videoDuration:dur}:{})},'search');
         (j.items||[]).forEach(it=>{
           const cid=it.snippet?.channelId;
           if(!cid||WL[cid]||BLOCKED[cid]||QUEUE[cid]||found.has(cid))return;
@@ -2497,7 +2568,7 @@ async function mine(){
     let queued=0;
     items.forEach(c=>{
       const p=baseProfile(c);
-      POOL[p.id]={title:p.title,subs:p.subs,vids:p.vids,up:p.up,seen:new Date().toISOString().slice(0,10),src:'mine'};
+      POOL[p.id]={title:p.title,subs:p.subs,vids:p.vids,up:p.up,seen:new Date().toISOString().slice(0,10),src:'mine',pid:PID};
       if(p.subs!=null&&p.subs>SET.preSubs)return;      // 워치 대상 밖은 풀에만
       scoreProfile(p);
       QUEUE[p.id]={...p,queuedAt:Date.now(),src:'채굴'};queued++;
@@ -2514,8 +2585,15 @@ async function mine(){
 async function reselect(){
   hideErr();
   if(!API_KEY){showErr('API 키를 먼저 저장해 주세요.');return;}
-  const ids=Object.keys(POOL).filter(id=>!WL[id]&&!BLOCKED[id]);
-  if(!ids.length){showErr('후보 풀이 비어 있습니다. 채굴하거나 v3 백업 JSON을 가져오세요.');return;}
+  const scope=document.getElementById('reScope')?.value||'all';
+  let ids=Object.keys(POOL).filter(id=>!WL[id]&&!BLOCKED[id]);
+  if(scope==='mine')ids=ids.filter(id=>POOL[id]?.pid===PID);
+  if(!ids.length){
+    showErr(scope==='mine'
+      ? '이 프로필로 채굴한 채널이 아직 없습니다. 아래 「2-B 채굴」부터 하세요.'
+      : '후보 풀이 비어 있습니다. 채굴하거나 v3 백업 JSON을 가져오세요.');
+    return;
+  }
   const [lo,hi]=document.getElementById('reSubs').value.split(',').map(Number);
   const krOnlyCh=document.getElementById('reKr').value==='1';
   const deepN=Number(document.getElementById('reDeep').value||500);
@@ -2530,7 +2608,7 @@ async function reselect(){
     const stage1=[];
     items.forEach(c=>{
       const p=baseProfile(c);
-      POOL[p.id]={title:p.title,subs:p.subs,vids:p.vids,up:p.up,seen:POOL[p.id]?.seen||'',src:POOL[p.id]?.src||'v3'};
+      POOL[p.id]={title:p.title,subs:p.subs,vids:p.vids,up:p.up,seen:POOL[p.id]?.seen||'',src:POOL[p.id]?.src||'v3',pid:POOL[p.id]?.pid||'v3'};
       if(!p.up)return;
       if(p.subs!=null&&(p.subs<lo||p.subs>hi))return;
       if(krOnlyCh&&p.hangul<0.3)return;
@@ -2593,7 +2671,7 @@ async function expandFeatured(){
     let queued=0;
     items.forEach(c=>{
       const p=baseProfile(c);
-      POOL[p.id]={title:p.title,subs:p.subs,vids:p.vids,up:p.up,seen:new Date().toISOString().slice(0,10),src:'expand'};
+      POOL[p.id]={title:p.title,subs:p.subs,vids:p.vids,up:p.up,seen:new Date().toISOString().slice(0,10),src:'expand',pid:PID};
       if(p.subs!=null&&p.subs>SET.preSubs)return;
       if(p.hangul<0.3)return;                        // v2.5에서 CNN·GMA 4,160만 유입을 막은 장치
       scoreProfile(p);
@@ -2617,12 +2695,20 @@ function setVal(id,v){const el=document.getElementById(id);if(el)el.value=v==nul
    쇼핑 쇼츠 프로필에서 「롱폼 대박」을 기본으로 두면 결과가 항상 0건이 된다. */
 function applyPresetDefaults(){
   const shorts=isShorts();
+  const md=document.getElementById('mineDur');
+  if(md)md.value=shorts?'short':'medium';
+  const mp=document.getElementById('minePeriod');
+  if(mp)mp.value=shorts?'30':'90';
+  const mn=document.getElementById('mineDurNote');
+  if(mn)mn.textContent=shorts
+    ? '쇼츠 프로필이라 「짧은 영상」으로 잡았습니다. 이걸 풀면 롱폼 채널만 잔뜩 들어옵니다'
+    : '롱폼 프로필이라 「중간(4~20분)」으로 잡았습니다. 3~4분대 채널까지 보려면 「전체」로';
   const btn=document.getElementById('pLong');
   if(btn)btn.textContent=shorts?'🛒 쇼츠 대박':'🎬 롱폼 대박';
   const rk=document.getElementById('pRookie');
   if(rk)rk.textContent='🐣 신생 채널';
   const sel=document.getElementById('fForm');
-  if(sel)sel.options[0].textContent=shorts?'≤3분 후보만':'롱폼만';
+  if(sel&&sel.options&&sel.options[0])sel.options[0].textContent=shorts?'≤3분 후보만':'롱폼만';
 }
 function preset(k){
   activePreset=k;
@@ -3485,7 +3571,7 @@ async function init(){
 
   ['mineSrc','mineCount'].forEach(id=>document.getElementById(id).addEventListener('change',updMineCost));
   ['scanDepth'].forEach(id=>document.getElementById(id).addEventListener('change',updWlStats));
-  loadTopic();updTopicNote();updMineCost();renderProfileBar();applyPresetDefaults();
+  loadTopic();updTopicNote();updMineCost();renderProfileBar();applyPresetDefaults();updReScope();
   const sd=document.getElementById('mineSrc');if(sd&&P().seed)sd.value=P().seed;
 
   await loadBoard();
