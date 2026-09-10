@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>겨울잠 아웃라이어 파인더 v4</title>
+<title>아웃라이어 파인더</title>
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <style>
@@ -283,6 +283,37 @@ svg.chart{width:100%;display:block;overflow:visible}
   font-size:12.5px;font-weight:550;cursor:pointer;color:var(--ink)}
 .fchip.on{background:var(--arc);color:#fff;border-color:var(--arc)}
 .fchip:hover:not(.on){background:var(--row-hover)}
+/* ── 프로필 바 ── */
+.pbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:26px;padding:12px 16px;
+  background:var(--lifted);border:1px solid var(--line-soft);border-radius:12px}
+.plabel{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--slate);flex:none}
+.pchips{display:flex;gap:6px;flex-wrap:wrap}
+.pchip{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;
+  padding:7px 15px;font-size:13.5px;font-weight:550;cursor:pointer;display:flex;align-items:center;gap:7px;transition:.13s}
+.pchip:hover{background:var(--row-hover)}
+.pchip.on{background:var(--ink);color:var(--canvas);border-color:var(--ink)}
+.pchip i{font-style:normal;font-size:10px;font-family:var(--mono);opacity:.6;
+  border:1px solid currentColor;border-radius:4px;padding:0 4px}
+.pchip.add{border-style:dashed;color:var(--slate);font-weight:500}
+.phint{font-size:12px;color:var(--slate);flex:1;min-width:180px}
+@media(max-width:700px){.phint{display:none}}
+
+/* ── 사용 안내 ── */
+.howto{background:var(--surface);border:1px solid var(--line-soft);border-left:3px solid var(--arc);
+  border-radius:0 11px 11px 0;padding:13px 16px;margin-top:14px}
+.howto .ht{font-size:12px;font-weight:700;letter-spacing:.03em;color:var(--arc);margin-bottom:7px}
+.howto ul,.howto ol{margin:0;padding-left:17px;display:flex;flex-direction:column;gap:5px}
+.howto li{font-size:13px;line-height:1.55;color:var(--charcoal)}
+.howto li b{color:var(--ink);font-weight:650}
+.howto p{font-size:13px;line-height:1.6;color:var(--charcoal)}
+.howto p b{color:var(--ink);font-weight:650}
+.fh{display:block;font-size:11px;line-height:1.45;color:var(--slate);margin-top:5px;max-width:270px}
+.intro-step{display:flex;gap:13px;align-items:flex-start;padding:12px 0;border-bottom:1px solid var(--line-soft)}
+.intro-step:last-child{border:none}
+.intro-step .n{width:26px;height:26px;border-radius:50%;background:var(--arc);color:#fff;flex:none;
+  display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;font-family:var(--mono)}
+.intro-step b{display:block;font-size:14px;font-weight:650;margin-bottom:3px}
+.intro-step p{font-size:12.5px;color:var(--slate);line-height:1.55;margin:0}
 .diag{margin-top:12px;font-size:12px}
 .diag table{font-size:11.5px}
 .queue-empty{padding:26px;text-align:center;color:var(--slate);font-size:13px;
@@ -304,7 +335,7 @@ svg.chart{width:100%;display:block;overflow:visible}
 <div class="wrap">
 
 <nav class="nav">
-  <span class="logo"><i></i>겨울잠 아웃라이어 파인더<span class="ver">v4.0</span></span>
+  <span class="logo"><i></i>아웃라이어 파인더<span class="ver">v4.2</span></span>
   <div class="tabs">
     <button class="tab" id="tabWatch" onclick="switchTab('watch')">① 워치리스트 <span class="tabdot" id="dotWatch">0</span></button>
     <button class="tab" id="tabScout" onclick="switchTab('scout')">② 후보 발굴 <span class="tabdot" id="dotQueue">0</span></button>
@@ -324,7 +355,13 @@ svg.chart{width:100%;display:block;overflow:visible}
 <div class="hero">
   <div class="ghost-t">Watchlist</div>
   <h1>넓게 훑지 않는다.<br>고른 채널만, 매일 전부.</h1>
-  <p>3,000개를 아홉 바퀴에 나눠 도는 대신 <b>내가 인정한 채널 300개를 매일 한 번에</b> 봅니다. 하루 쿼터의 6%면 끝나고, 누락 구간이 없어 비교가 성립합니다.</p>
+  <p>3,353개를 아홉 바퀴에 나눠 도는 대신 <b>내가 인정한 채널 1,000개를 매일 한 번에</b> 봅니다. 하루 쿼터의 20%면 끝나고, 누락 구간이 없어 비교가 성립합니다.</p>
+</div>
+
+<div class="pbar">
+  <span class="plabel">주제 프로필</span>
+  <div id="profileBar" class="pchips"></div>
+  <span class="phint" id="profileHint"></span>
 </div>
 
 <div class="steps">
@@ -372,7 +409,7 @@ svg.chart{width:100%;display:block;overflow:visible}
   <div class="setgrid">
     <div class="fg"><label class="fl">검색 버킷 한도 (search.list)</label><input type="number" id="setLimSearch"></div>
     <div class="fg"><label class="fl">일반 버킷 한도 (videos·channels·playlistItems)</label><input type="number" id="setLimCore"></div>
-    <div class="fg"><label class="fl">워치리스트 상한 (채널)</label><input type="number" id="setWatchCap"></div>
+    <div class="fg"><label class="fl">워치리스트 상한 (채널)</label><input type="number" id="setWatchCap"><span class="fh">1,000 = 스캔 약 2,000유닛(하루의 20%). 3,000까지 올릴 수 있지만 6,000유닛이라 재측정 여유가 사라집니다</span></div>
     <div class="fg"><label class="fl">채널당 조회 깊이 (업로드 개수)</label><input type="number" id="setDepth"></div>
     <div class="fg"><label class="fl">1차 후보 · 구독자 ≤</label><input type="number" id="setPreSubs"></div>
     <div class="fg"><label class="fl">1차 후보 · 조회수 ≥</label><input type="number" id="setPreViews"></div>
@@ -406,7 +443,16 @@ svg.chart{width:100%;display:block;overflow:visible}
 <section class="card">
   <div class="eyebrow"><span>워치리스트 — 매일 전수 스캔</span></div>
   <h2 class="sec">고른 채널만 봅니다</h2>
-  <p class="lead">등록 채널이 3,000개를 넘으면 하루 쿼터로 한 바퀴를 못 돕니다. 어제 스캔한 채널과 오늘 스캔한 채널이 섞이면 <b>어느 영상이 상위인지가 스캔 순서에 좌우</b>됩니다. 워치리스트는 규모를 포기하고 <b>매 실행 100% 커버리지</b>를 택합니다. 채널 300개 × 2유닛 = 약 600유닛으로 끝나므로 하루에 여러 번 돌려도 됩니다.</p>
+  <p class="lead">등록 채널이 3,000개를 넘으면 하루 쿼터로 한 바퀴를 못 돕니다. 어제 스캔한 채널과 오늘 스캔한 채널이 섞이면 <b>어느 영상이 상위인지가 스캔 순서에 좌우</b>됩니다. 워치리스트는 규모를 포기하고 <b>매 실행 100% 커버리지</b>를 택합니다. 채널 1,000개 × 2유닛 = 약 2,000유닛, 하루 쿼터의 20%입니다.</p>
+  <div class="howto">
+    <div class="ht">이 탭에서 할 일은 하나 — 스캔 버튼 누르기</div>
+    <ul>
+      <li>채널을 <b>추가하는 곳은 여기가 아니라 ② 후보 발굴</b>입니다. 여기는 이미 승인된 채널을 관리하고 스캔만 돌립니다</li>
+      <li>매일 아침 <b>기간 7일 → ▶ 전수 스캔</b> 한 번이면 끝입니다. 나머지 설정은 그대로 두셔도 됩니다</li>
+      <li>스캔이 끝나면 자동으로 ③ 아웃라이어 탭으로 넘어갑니다</li>
+      <li>채널이 0개면 스캔할 게 없습니다 — ②로 가세요</li>
+    </ul>
+  </div>
 
   <div class="strip">
     <div class="stat"><span class="k">워치리스트</span><span class="v em" id="wlCount">0</span><span class="sub" id="wlCap">/ 300</span></div>
@@ -424,22 +470,26 @@ svg.chart{width:100%;display:block;overflow:visible}
         <option value="30">최근 30일 — 넓게</option>
         <option value="90">최근 90일 — 성공 사례 아카이브</option>
       </select>
+      <span class="fh">이 기간 안에 올라온 영상만 후보가 됩니다. 매일 돌리면 7일, 오랜만이면 30일</span>
     </div>
     <div class="fg"><label class="fl">조회 깊이</label>
       <select id="scanDepth">
         <option value="50" selected>채널당 50개 (2유닛)</option>
-        <option value="100">채널당 100개 (3유닛)</option>
-        <option value="200">채널당 200개 (5유닛)</option>
+        <option value="100">채널당 100개 (4유닛)</option>
+        <option value="200">채널당 200개 (8유닛)</option>
       </select>
+      <span class="fh">채널배수의 비교 기준선을 만드는 표본 수이기도 합니다. 「Baseline 부족」이 많으면 100으로</span>
     </div>
     <div class="fg"><label class="fl">캐시</label>
       <select id="scanFresh">
         <option value="0" selected>30분 캐시 사용 (권장)</option>
         <option value="1">최신 조회수로 강제 갱신</option>
       </select>
+      <span class="fh">30분 안에 두 번 돌릴 때만 의미가 있습니다. 강제 갱신은 쿼터를 그대로 다시 씁니다</span>
     </div>
     <div class="fg"><label class="fl">&nbsp;</label>
       <button class="btn btn-arc" id="scanBtn" onclick="runScan()">▶ 워치리스트 전수 스캔</button>
+      <span class="fh" id="scanEta">채널 100개당 약 20초</span>
     </div>
   </div>
   <div class="progress" id="scanProg"><i style="width:0"></i></div>
@@ -465,6 +515,7 @@ svg.chart{width:100%;display:block;overflow:visible}
       <option value="active">활동 중만</option>
       <option value="dormant">휴면만</option>
       <option value="suspect">재편집 의심만</option>
+      <option value="offtopic">주제 다른 채널만</option>
       <option value="nohit">아웃라이어 0건</option>
     </select>
     <button class="btn" onclick="profileWatchlist()">🔄 채널 정보 갱신</button>
@@ -478,10 +529,48 @@ svg.chart{width:100%;display:block;overflow:visible}
 
 <!-- ══════════ ② SCOUT ══════════ -->
 <div class="panel" id="panelScout">
+
+<section class="card" style="border-color:var(--arc)">
+  <div class="eyebrow">0 · 이 프로필의 주제<span class="sp" id="topicScope"></span></div>
+  <h2 class="sec">어떤 채널을 "인정"할지 여기서 정합니다</h2>
+  <p class="lead">채널 선별은 두 가지를 봅니다. <b>구조</b>(재편집 채널인가 · 구독자 구간 · 형태 비율 · 활동성)는 자동으로 판정하지만, <b>주제</b>는 알려주셔야 합니다. 여기를 <span class="mono">주제 무관</span>으로 두면 요리 채널과 투자 채널이 똑같은 점수를 받습니다.</p>
+  <div style="margin-top:16px;max-width:640px">
+    <label class="fl">내 채널 주제</label>
+    <select id="topicMode" onchange="setTopic()" style="width:100%;max-width:340px">
+      <option value="all">주제 무관 — 구조만 본다</option>
+      <option value="money">💰 투자·머니</option>
+      <option value="life">🎨 생활·자기계발</option>
+      <option value="custom">직접 입력 — 내 주제 단어</option>
+    </select>
+    <input id="topicCustom" placeholder="쉼표 구분 예: 배당주, 퇴직연금, 재건축, 절세, 노후, 전세, 청약"
+      style="display:none;width:100%;margin-top:9px" onchange="setTopic()">
+    <p class="hint" id="topicNote" style="margin-top:8px"></p>
+    <p class="hint">고르면 이미 조사해 둔 채널까지 <b>전부 다시 채점</b>됩니다 — API를 다시 부르지 않습니다.</p>
+  </div>
+  <div class="howto" style="margin-top:16px">
+    <div class="ht">이 키워드는 <b>검색어가 아닙니다</b></div>
+    <p>이 단어로 유튜브를 검색하지 않습니다. 이미 확보한 채널의 <b>채널명과 최근 영상 제목 50개</b>에 이 단어가 몇 %나 나오는지만 셉니다. 그 비율이 <span class="mono">주제 적합도</span>이고, 워치 적합도 100점 중 <b>20점</b>을 차지합니다. 나머지 80점은 주제와 무관한 구조 신호입니다.</p>
+    <p style="margin-top:7px">실제로 유튜브를 <b>검색</b>하는 건 아래 「2-B 채굴」의 시드뿐입니다. 둘은 다른 기능입니다.</p>
+  </div>
+  <div class="howto" style="margin-top:12px">
+    <div class="ht">프로필마다 따로 저장됩니다</div>
+    <p>워치리스트 · 승격 큐 · 차단 목록 · 스캔 결과 · 벤치마크가 <b>프로필별로 완전히 분리</b>됩니다. 후보 풀(원본 채널 목록)만 공유합니다. 위쪽 프로필 칩으로 전환하면 화면 전체가 그 주제 것으로 바뀝니다.</p>
+  </div>
+</section>
+
 <section class="card">
-  <div class="eyebrow">승격 큐<span class="sp">승인한 채널만 워치리스트에 들어갑니다</span></div>
+  <div class="eyebrow">1 · 승격 큐<span class="sp">승인한 채널만 워치리스트에 들어갑니다</span></div>
   <h2 class="sec">자동으로 넣지 않습니다</h2>
   <p class="lead">v3에서 채널이 3,353개까지 불어난 이유는 채굴·연결 확장이 <b>찾은 채널을 곧바로 등록</b>했기 때문입니다. 여기서는 모두 큐에 쌓이고, 재편집 의심 채널은 <b>자동 차단</b>되며, 나머지는 적합도 점수와 함께 승인 대기합니다.</p>
+  <div class="howto">
+    <div class="ht">카드 읽는 법</div>
+    <ul>
+      <li><b>오른쪽 큰 숫자</b> = 워치 적합도 0~100. 매일 볼 가치가 있는가</li>
+      <li><b>🚫 재편집 의심</b> = 짤·모음·하이라이트 양산 채널. 기본 60점 이상은 자동 차단이고 승격 버튼이 「그래도 승격」으로 바뀝니다</li>
+      <li><b>🎯 주제 N%</b> = 위에서 정한 내 주제와 얼마나 겹치는지. 20% 미만이면 다른 분야로 봅니다</li>
+      <li><b>「근거」 버튼</b>을 누르면 7개 축이 각각 몇 점인지, 재편집으로 본 이유가 무엇인지 나옵니다. 애매하면 이걸 먼저 보세요</li>
+    </ul>
+  </div>
   <div class="row" style="margin-top:14px">
     <button class="btn btn-ink" onclick="approveAll('good')">✓ 적합도 60 이상 일괄 승인</button>
     <button class="btn" onclick="rejectAll('blocked')">✕ 차단 대상 일괄 제거</button>
@@ -490,6 +579,7 @@ svg.chart{width:100%;display:block;overflow:visible}
       <option value="fit" selected>적합도순</option>
       <option value="subs">구독자순</option>
       <option value="reedit">재편집 의심순</option>
+      <option value="topic">주제 겹침순</option>
     </select>
     <span class="sp muted" id="queueNote" style="font-size:12.5px"></span>
   </div>
@@ -499,9 +589,18 @@ svg.chart{width:100%;display:block;overflow:visible}
 </section>
 
 <section class="card">
-  <div class="eyebrow">A · 기존 채널 재선별<span class="sp" id="poolNote"></span></div>
-  <p class="lead">v3에서 쌓은 채널을 <b>후보 풀</b>로 읽어 왔습니다. 삭제하지 않고 보관만 하며, 아래 2단계로 걸러 워치리스트를 다시 뽑습니다. 1단계는 <span class="mono">channels.list</span> 50개당 1유닛이라 3,000채널도 약 60유닛입니다.</p>
-  <div class="row" style="margin-top:14px">
+  <div class="eyebrow">2-A · 기존 채널 재선별<span class="sp" id="poolNote"></span></div>
+  <h2 class="sec">v3에서 쌓은 채널을 다시 거른다</h2>
+  <p class="lead">v3의 채널 3,353개를 <b>후보 풀</b>로 읽어 왔습니다. 삭제하지 않고 보관만 하며, 2단계로 걸러 워치리스트를 다시 뽑습니다. <b>처음이라면 여기부터 하세요</b> — 채굴보다 싸고 정확합니다.</p>
+  <div class="howto">
+    <div class="ht">2단계로 나눈 이유</div>
+    <ul>
+      <li><b>1단계</b> — 채널 기본 정보만 조회. <span class="mono">channels.list</span>가 50채널당 1유닛이라 3,000채널도 약 60유닛입니다. 여기서 구독자 범위·한글 채널명·명백한 양산형을 쳐냅니다</li>
+      <li><b>2단계</b> — 1단계 통과 상위 N개만 업로드 50개를 실제로 열어 봅니다. 채널당 2유닛. 중앙 길이·롱폼 비율·제목 패턴·<b>주제 겹침</b>은 여기서만 알 수 있습니다</li>
+      <li>결과는 워치리스트가 아니라 <b>승격 큐</b>로 갑니다. 위로 올라가 확인하고 승인하세요</li>
+    </ul>
+  </div>
+  <div class="row" style="margin-top:16px">
     <div class="fg"><label class="fl">구독자 범위</label>
       <select id="reSubs">
         <option value="1000,100000" selected>1천 ~ 10만 (기본)</option>
@@ -509,40 +608,50 @@ svg.chart{width:100%;display:block;overflow:visible}
         <option value="5000,300000">5천 ~ 30만 (넓게)</option>
         <option value="0,999999999">제한 없음</option>
       </select>
+      <span class="fh">작은 채널이 터진 게 벤치마크 재료입니다. 10만 초과는 체급이 달라 참고가 안 됩니다</span>
     </div>
     <div class="fg"><label class="fl">채널명</label>
       <select id="reKr">
         <option value="1" selected>🇰🇷 한글 채널명만</option>
         <option value="0">전체</option>
       </select>
+      <span class="fh">끄면 CNN·GMA 같은 해외 대형 채널이 들어옵니다. 영문명 한국 채널을 놓칠 수 있는 건 감수</span>
     </div>
     <div class="fg"><label class="fl">2단계 정밀 조사 대상</label>
       <select id="reDeep">
         <option value="300">상위 300채널 (약 600유닛)</option>
         <option value="500" selected>상위 500채널 (약 1,000유닛)</option>
         <option value="800">상위 800채널 (약 1,600유닛)</option>
+        <option value="1200">상위 1,200채널 (약 2,400유닛)</option>
       </select>
+      <span class="fh">워치리스트에 넣고 싶은 수의 2~3배로 잡으세요. 절반쯤은 재편집·주제 불일치로 걸러집니다</span>
     </div>
-    <div class="fg"><label class="fl">&nbsp;</label><button class="btn btn-arc" id="reBtn" onclick="reselect()">⚗ 재선별 시작</button></div>
+    <div class="fg"><label class="fl">&nbsp;</label><button class="btn btn-arc" id="reBtn" onclick="reselect()">⚗ 재선별 시작</button>
+      <span class="fh">3~10분 걸립니다. 탭을 닫지 마세요</span></div>
   </div>
   <div class="progress" id="reProg"><i style="width:0"></i></div>
   <div class="statusline" id="reStatus"></div>
 </section>
 
 <section class="card">
-  <div class="eyebrow">B · 채굴 — 검색으로 새 채널 찾기<span class="sp">검색 버킷 사용</span></div>
-  <div class="row" style="margin-top:6px">
+  <div class="eyebrow">2-B · 채굴 — 검색으로 새 채널 찾기<span class="sp">검색 버킷 사용 · 하루 100회</span></div>
+  <h2 class="sec">후보 풀에 없는 채널을 데려온다</h2>
+  <p class="lead"><b>여기 키워드는 실제로 유튜브를 검색합니다</b> (위 「내 주제」와 다릅니다 — 그건 판정용 사전이고 이건 검색어). 키워드 1개 = 검색 1회이고 하루 100회가 전부이므로 아껴 쓰세요. 재선별을 다 돌린 뒤에 하는 게 순서입니다.</p>
+  <div class="row" style="margin-top:16px">
     <div class="fg"><label class="fl">시드</label>
       <select id="mineSrc">
         <option value="seed" selected>💰 투자·머니 (70종)</option>
+        <option value="shop">🛒 쇼핑·인기상품 (70종)</option>
         <option value="life">🎨 생활·자기계발 (70종)</option>
         <option value="mix">🔀 혼합</option>
         <option value="hot">직전 결과의 뜨는 단어</option>
         <option value="custom">직접 입력</option>
       </select>
+      <span class="fh">실행할 때마다 시드가 순환합니다 — 매일 눌러도 매번 다른 키워드로 검색합니다</span>
     </div>
     <div class="fg"><label class="fl">키워드 수</label>
       <select id="mineCount"><option value="10">10개</option><option value="20" selected>20개</option><option value="40">40개</option></select>
+      <span class="fh">그대로 검색 횟수입니다. 하루 100회 한도 안에서</span>
     </div>
     <div class="fg"><label class="fl">정렬</label>
       <select id="mineOrder">
@@ -550,13 +659,25 @@ svg.chart{width:100%;display:block;overflow:visible}
         <option value="date">🆕 최신순 — 소형 채널 표집</option>
         <option value="viewCount">🔥 조회수순</option>
       </select>
+      <span class="fh">조회수순은 이미 큰 채널이 상위를 채웁니다. 작은 채널을 찾으려면 최신순</span>
     </div>
     <div class="fg"><label class="fl">업로드 기간</label>
       <select id="minePeriod"><option value="30">30일</option><option value="90" selected>90일</option><option value="365">1년</option></select>
+      <span class="fh">지금 활동 중인 채널만 원하면 30일</span>
     </div>
-    <div class="fg"><label class="fl">&nbsp;</label><button class="btn btn-ink" id="mineBtn" onclick="mine()">⛏ 채굴</button></div>
+    <div class="fg"><label class="fl">&nbsp;</label><button class="btn btn-ink" id="mineBtn" onclick="mine()">⛏ 채굴</button>
+      <span class="fh">1~2분</span></div>
   </div>
   <input id="mineCustom" placeholder="쉼표 구분 예: 배당주, 재건축, 퇴직연금" style="margin-top:9px;width:100%;display:none">
+  <div class="howto">
+    <div class="ht">언제 쓰나</div>
+    <ul>
+      <li><b>재선별을 다 돌린 뒤</b>에 쓰세요. 후보 풀에 이미 3,000개가 있는데 먼저 채굴하면 검색 쿼터만 날립니다</li>
+      <li>워치리스트가 목표치를 못 채웠거나, 몇 주 지나 새 채널이 궁금할 때 <b>주 1~2회</b>면 충분합니다</li>
+      <li>검색 API는 유튜브 전체를 돌려주지 않습니다. 여기서 안 나온다고 없는 채널이 아닙니다 — <b>누락은 구조적</b>입니다</li>
+      <li>검색 쿼터가 바닥난 날에는 아래 <b>🔗 연결 확장</b>을 쓰세요. 일반 버킷을 쓰므로 검색 한도와 무관합니다</li>
+    </ul>
+  </div>
   <div class="strip">
     <div class="stat"><span class="k">예상 검색 쿼터</span><span class="v" id="mineCost">20</span></div>
     <div class="stat"><span class="k">남은 검색</span><span class="v" id="mineLeft">100</span></div>
@@ -598,6 +719,17 @@ svg.chart{width:100%;display:block;overflow:visible}
 <div class="panel on" id="panelOut">
 <section class="card">
   <div class="eyebrow">아웃라이어<span class="sp" id="outMeta"></span></div>
+  <div class="howto">
+    <div class="ht">이 화면 읽는 법</div>
+    <ul>
+      <li>썸네일 왼쪽 위 <b>숫자</b> = 백분위 점수 0~100. <b>절대 성적이 아니라 지금 로드된 후보 안의 등수</b>입니다. 90점은 "상위 10%"라는 뜻이지 "잘 터졌다"가 아닙니다</li>
+      <li>그래서 카드마다 <b>조회수·VPS·배수 실제 수치</b>를 같이 띄웁니다. 점수와 수치를 함께 보세요</li>
+      <li><b>카드를 클릭</b>하면 근거 화면 — 4개 축이 각각 상위 몇 %인지, 이 채널 평소 성적 분포에서 어디쯤인지, 비교에 쓴 영상이 무엇인지가 나옵니다</li>
+      <li>쓸 만하면 <b>♡</b>를 눌러 ④ 벤치마크에 담으세요. 5~10개 모이면 기획 프롬프트를 만들 수 있습니다</li>
+      <li>결과가 0건이면 <b>「제외 사유 보기」</b>. 후보가 없는 것과 필터에 가려진 것은 다릅니다</li>
+    </ul>
+  </div>
+  <p class="hint" style="margin-bottom:4px"><b>프리셋</b> — 아래 칩이 필터를 한 번에 세팅합니다. 매일은 🎬 롱폼 대박부터 보세요.</p>
   <div class="row">
     <button class="fchip" id="pAll" onclick="preset('all')">전체</button>
     <button class="fchip on" id="pLong" onclick="preset('long')">🎬 롱폼 대박</button>
@@ -662,6 +794,15 @@ svg.chart{width:100%;display:block;overflow:visible}
 <section class="card">
   <div class="eyebrow">벤치마크 보드<span class="sp" id="boardMeta"></span></div>
   <p class="lead">v3에서 저장한 레퍼런스를 그대로 이어서 씁니다. 수가 많은 것보다 <b>내 제작에 실제로 옮길 수 있는 이유</b>를 메모로 남기는 편이 낫습니다.</p>
+  <div class="howto">
+    <div class="ht">이렇게 쓰세요</div>
+    <ul>
+      <li>③에서 ♡로 담을 때 <b>메모를 반드시 한 줄</b> 쓰세요 — "숫자를 제목 앞에 뒀다", "손해 보는 상황을 훅으로" 처럼. 이 메모가 프롬프트에 그대로 들어갑니다</li>
+      <li>참고 유형(제목/썸네일/소재/종합)을 골라 두면 나중에 필터로 골라 볼 수 있습니다</li>
+      <li><b>5개 이상</b> 모이면 「📋 기획·스크립트 프롬프트 복사」 → Claude나 GPT에 붙여넣기. 공통 패턴 3줄 → 주제 5개 → 제목 3안 → 롱폼 스크립트가 나옵니다</li>
+      <li>카드를 다시 누르면 메모를 고치거나 삭제할 수 있습니다</li>
+    </ul>
+  </div>
   <div class="row" style="margin-top:14px">
     <select id="bmFilter" onchange="renderBoard()">
       <option value="all">전체</option>
@@ -698,7 +839,7 @@ svg.chart{width:100%;display:block;overflow:visible}
 <div class="toast" id="toast"></div>
 <script>
 /* ══════════════════════════════════════════════════════════════════
-   겨울잠 아웃라이어 파인더 v4.0 — 워치리스트 판
+   아웃라이어 파인더 v4.2 — 워치리스트 · 다중 프로필
    단일 index.html · HTML/CSS/Vanilla JS · 빌드 없음 · GitHub Pages
 
    v3.2에서 확인된 구조적 한계와 이번 판의 대응
@@ -745,7 +886,7 @@ function del(k){try{localStorage.removeItem(k);}catch(e){}delete mem[k];}
 /* ───────── 설정 ───────── */
 const DEF_SET={
   limSearch:100, limCore:10000,
-  watchCap:300, depth:50,
+  watchCap:1000, depth:50,
   preSubs:100000, preViews:5000,
   baseMin:8, baseFloor:500, matureDays:7,
   ageAdj:1, tauShort:24, tauLong:72,
@@ -765,7 +906,7 @@ function saveSettings(){
     const n=Number(el.value);
     if(el.value!==''&&!isNaN(n))SET[k]=n;
   });
-  SET.watchCap=Math.max(20,Math.min(2000,SET.watchCap));
+  SET.watchCap=Math.max(20,Math.min(3000,SET.watchCap));
   SET.bootLoad=Math.max(60,Math.min(3000,SET.bootLoad));
   store('v4_set',JSON.stringify(SET));
   paintQuota();updWlStats();updMineCost();
@@ -895,15 +1036,19 @@ async function dbAll(s){
 /* v4 핵심 — 전량 getAll 대신 discoveredAt 인덱스를 최신부터 N건만 읽는다.
    5.8만 건이 쌓여 있어도 400건만 파싱하므로 시작이 즉시 끝난다. */
 async function dbRecentVideos(limit,before=Infinity){
-  const mine=[...MEMDB.videos.values()].filter(v=>(v.discoveredAt||0)<before);
+  /* pid가 없는 옛 기록은 첫 프로필 소유로 본다 */
+  const first=Object.keys(PROFILES||{})[0]||PID;   // 프로필 이전 기록은 첫 프로필 소유
+  const mineP=v=>(v.pid||first)===PID;
+  const SCAN_CAP=30000;                                       // 최악의 경우를 묶어 둔다
+  const mem=[...MEMDB.videos.values()].filter(v=>(v.discoveredAt||0)<before&&mineP(v));
   try{
     const db=await idb();
     const rows=await new Promise((res,rej)=>{
-      const out=[];
+      const out=[];let scanned=0;
       const os=db.transaction('videos','readonly').objectStore('videos');
       if(!os.indexNames.contains('by_disc')){                 // 인덱스가 없는 예외 상황
         const rq=os.getAll();
-        rq.onsuccess=()=>res((rq.result||[]).filter(v=>(v.discoveredAt||0)<before)
+        rq.onsuccess=()=>res((rq.result||[]).filter(v=>(v.discoveredAt||0)<before&&mineP(v))
           .sort((a,b)=>(b.discoveredAt||0)-(a.discoveredAt||0)).slice(0,limit));
         rq.onerror=()=>rej(rq.error);return;
       }
@@ -911,16 +1056,17 @@ async function dbRecentVideos(limit,before=Infinity){
       const rq=os.index('by_disc').openCursor(range,'prev');
       rq.onsuccess=e=>{
         const c=e.target.result;
-        if(!c||out.length>=limit)return res(out);
-        out.push(c.value);c.continue();
+        if(!c||out.length>=limit||++scanned>SCAN_CAP)return res(out);
+        if(mineP(c.value))out.push(c.value);
+        c.continue();
       };
       rq.onerror=()=>rej(rq.error);
     });
     const m=new Map(rows.map(v=>[v.id,v]));
-    mine.forEach(v=>m.set(v.id,v));
+    mem.forEach(v=>m.set(v.id,v));
     return [...m.values()].sort((a,b)=>(b.discoveredAt||0)-(a.discoveredAt||0)).slice(0,limit);
   }catch(e){
-    return mine.sort((a,b)=>(b.discoveredAt||0)-(a.discoveredAt||0)).slice(0,limit);
+    return mem.sort((a,b)=>(b.discoveredAt||0)-(a.discoveredAt||0)).slice(0,limit);
   }
 }
 async function dbDel(s,key){
@@ -1169,16 +1315,91 @@ function toggleTheme(){
    채널 — 워치리스트 / 후보 풀 / 승격 큐
    ══════════════════════════════════════════════════════════════════ */
 
-const WL_KEY='v4_watchlist', POOL_KEY='v4_pool', QUEUE_KEY='v4_queue', BLOCK_KEY='v4_blocked';
-const POOL_CAP=8000, QUEUE_CAP=600;
+/* ══════════════════════════════════════════════════════════════════
+   프로필 — 서로 다른 주제를 완전히 분리해 운영한다
+   롱폼 투자 채널과 쇼핑 쇼츠 채널은 판정 기준이 정반대다:
+   전자는 잦은 업로드·짧은 길이가 '양산형' 신호이지만
+   후자는 그게 바로 정상이다. 같은 워치리스트에 섞으면 둘 다 망가진다.
+   ══════════════════════════════════════════════════════════════════ */
+const POOL_KEY='v4_pool', POOL_CAP=8000, QUEUE_CAP=600;
+const PROFILES_KEY='v4_profiles', ACTIVE_KEY='v4_pid';
+let PROFILES={}, PID='money';
 let BLOCKED={};   // 사용자가 명시적으로 거절한 채널 — 다시 큐에 올라오지 않는다
 
+const DEFAULT_PROFILES={
+  money:{
+    id:'money', name:'투자·머니', emoji:'💰', format:'long',
+    topic:'custom',
+    custom:'예금, 적금, 정기예금, 파킹통장, 노후준비, 노후, 연금, 국민연금, 퇴직연금, IRP, ISA, 주식투자, 주식, 증시, 배당, ETF, 투자, 머니, 돈, 부동산, 아파트, 전세, 월세, 청약, 재건축, 재개발, 대출, 금리, 이자, 수익률, 자산, 절약, 재테크, 세금, 연말정산, 실수령액, 월급',
+    seed:'seed',
+    desc:'8~12분 롱폼 벤치마크. 구독자는 작은데 채널 평소치를 크게 넘은 영상을 찾는다'
+  },
+  shop:{
+    id:'shop', name:'쇼핑·인기상품', emoji:'🛒', format:'short',
+    topic:'custom',
+    custom:'쇼핑, 특가, 할인, 최저가, 세일, 핫딜, 인기상품, 추천템, 꿀템, 잇템, 리뷰, 후기, 언박싱, 내돈내산, 가성비, 신상, 품절, 재입고, 공구, 쿠팡, 직구, 사은품, 득템, 반값, 마감임박, 역대급, 비교',
+    seed:'shop',
+    desc:'쇼츠 벤치마크. 잦은 업로드와 짧은 길이는 정상 신호로 본다'
+  }
+};
+function loadProfiles(){
+  try{PROFILES=JSON.parse(load(PROFILES_KEY)||'null')||null;}catch(e){PROFILES=null;}
+  if(!PROFILES||!Object.keys(PROFILES).length){
+    PROFILES=JSON.parse(JSON.stringify(DEFAULT_PROFILES));
+    /* v4.1까지 쓰던 단일 주제 설정은 첫 프로필로 옮긴다 */
+    const oldTopic=load('v4_topic'), oldCustom=load('v4_topic_custom');
+    if(oldTopic&&oldTopic!=='all'){PROFILES.money.topic=oldTopic;if(oldCustom)PROFILES.money.custom=oldCustom;}
+    saveProfiles();
+  }
+  PID=load(ACTIVE_KEY)||Object.keys(PROFILES)[0];
+  if(!PROFILES[PID])PID=Object.keys(PROFILES)[0];
+}
+function saveProfiles(){try{store(PROFILES_KEY,JSON.stringify(PROFILES));}catch(e){storageWarning();}}
+function P(){return PROFILES[PID]||DEFAULT_PROFILES.money;}
+function isShorts(){return P().format==='short';}
+function pKey(base){return base+'__'+PID;}
+
 function loadChannels(){
-  try{WL=JSON.parse(load(WL_KEY)||'{}')||{};}catch(e){WL={};}
+  /* v4.1의 프로필 없는 저장분은 첫 프로필로 한 번만 옮긴다 */
+  if(load('v4_pid_migrated')!=='1'){
+    const first=Object.keys(PROFILES)[0];
+    [['v4_watchlist','v4_watchlist__'+first],['v4_queue','v4_queue__'+first],['v4_blocked','v4_blocked__'+first]]
+      .forEach(([from,to])=>{const v=load(from);if(v&&!load(to))store(to,v);});
+    store('v4_pid_migrated','1');
+  }
+  try{WL=JSON.parse(load(pKey('v4_watchlist'))||'{}')||{};}catch(e){WL={};}
   try{POOL=JSON.parse(load(POOL_KEY)||'{}')||{};}catch(e){POOL={};}
-  try{QUEUE=JSON.parse(load(QUEUE_KEY)||'{}')||{};}catch(e){QUEUE={};}
-  try{BLOCKED=JSON.parse(load(BLOCK_KEY)||'{}')||{};}catch(e){BLOCKED={};}
+  try{QUEUE=JSON.parse(load(pKey('v4_queue'))||'{}')||{};}catch(e){QUEUE={};}
+  try{BLOCKED=JSON.parse(load(pKey('v4_blocked'))||'{}')||{};}catch(e){BLOCKED={};}
   migrateV3();
+}
+/* 프로필 전환 — 후보 풀만 공유하고 나머지는 전부 갈아 끼운다 */
+async function switchProfile(pid){
+  if(!PROFILES[pid]||pid===PID)return;
+  PID=pid;store(ACTIVE_KEY,pid);
+  loadChannels();loadTopic();
+  ALL=[];VIEW=[];EXCLUDED=[];CLUSTERS=[];oldestLoaded=Infinity;
+  try{
+    ALL=await dbRecentVideos(SET.bootLoad);
+    if(ALL.length){
+      oldestLoaded=Math.min(...ALL.map(v=>v.discoveredAt||0));
+      ALL.forEach(applySnapMetrics);rankPool(ALL);CLUSTERS=buildClusters(ALL);
+    }
+  }catch(e){}
+  await loadBoard();
+  renderProfileBar();renderWatch();renderQueue();renderBoard();
+  applyPresetDefaults();applyFilters();updTopicNote();updMineCost();
+  toast(`${P().emoji} ${P().name} 프로필로 전환했습니다.`);
+}
+function renderProfileBar(){
+  updTopicScope();
+  const bar=document.getElementById('profileBar');
+  if(bar)bar.innerHTML=Object.values(PROFILES).map(p=>
+    `<button class="pchip${p.id===PID?' on':''}" onclick="switchProfile('${p.id}')">${p.emoji} ${esc(p.name)}
+      <i>${p.format==='short'?'쇼츠':'롱폼'}</i></button>`).join('')
+    +`<button class="pchip add" onclick="openProfileEdit()">⚙ 프로필 설정</button>`;
+  const hint=document.getElementById('profileHint');
+  if(hint)hint.textContent=P().desc||'';
 }
 /* v3의 ch_universe를 후보 풀로 옮긴다. 워치리스트에는 자동 등록하지 않는다 —
    3,353채널을 그대로 승계하면 v3.2의 쿼터 문제가 그대로 재현된다. */
@@ -1205,7 +1426,7 @@ function migrateV3(){
   store('v4_migrated','1');
   if(ids.length)setTimeout(()=>toast(`v3에서 채널 ${ids.length.toLocaleString()}개를 후보 풀로 가져왔습니다. ② 후보 발굴에서 재선별하세요.`),1200);
 }
-function saveWL(){try{store(WL_KEY,JSON.stringify(WL));}catch(e){storageWarning();}updWlStats();}
+function saveWL(){try{store(pKey('v4_watchlist'),JSON.stringify(WL));}catch(e){storageWarning();}updWlStats();}
 function savePool(){
   const ids=Object.keys(POOL);
   if(ids.length>POOL_CAP){
@@ -1223,10 +1444,10 @@ function saveQueue(){
     ids.sort((a,b)=>(QUEUE[a].fit||0)-(QUEUE[b].fit||0));
     ids.slice(0,ids.length-QUEUE_CAP).forEach(k=>delete QUEUE[k]);
   }
-  try{store(QUEUE_KEY,JSON.stringify(QUEUE));}catch(e){storageWarning();}
+  try{store(pKey('v4_queue'),JSON.stringify(QUEUE));}catch(e){storageWarning();}
   const d=document.getElementById('dotQueue');if(d)d.textContent=Object.keys(QUEUE).length;
 }
-function saveBlocked(){try{store(BLOCK_KEY,JSON.stringify(BLOCKED));}catch(e){}}
+function saveBlocked(){try{store(pKey('v4_blocked'),JSON.stringify(BLOCKED));}catch(e){}}
 
 /* ───────── 채널 프로파일 ─────────
    1단계: channels.list만으로 얻는 값 (50채널당 1유닛 — 3,000채널도 60유닛)
@@ -1289,11 +1510,105 @@ function titleRepeatRate(titles){
   const avgJ=n?sum/n:0;
   return Math.max(top*0.9,avgJ*2.2);
 }
+/* ───────── 주제 판정 ─────────
+   v4.0 초판은 채널을 '구조'(재편집 여부·구독자 구간·롱폼 비율·활동성)로만 골랐다.
+   그래서 요리 채널과 투자 채널이 똑같이 통과했다 — 벤치마크 대상으로는 쓸모가 다르다.
+   여기서는 채널명과 업로드 샘플 제목이 내 주제 어휘와 얼마나 겹치는지를 함께 본다.
+   키워드는 '검색어'가 아니라 '판정 사전'이다 — 이 단어로 검색하지 않고, 이미 확보한
+   제목에 이 단어가 얼마나 나오는지만 센다. */
+const TOPIC_SETS={
+  all:{label:'주제 무관 — 구조만 본다',re:null},
+  money:{label:'💰 투자·머니',re:/(월급|급여|연봉|수당|절약|재테크|적금|예금|연금|노후|은퇴|부동산|아파트|빌라|오피스텔|전세|월세|보증금|청약|분양|재건축|재개발|입주|대출|금리|이자|주식|증시|코스피|코스닥|나스닥|S&P|배당|ETF|펀드|채권|환율|달러|엔화|금값|유가|반도체|2차전지|부업|투잡|창업|자영업|폐업|매출|세금|정산|상속|증여|보험|실비|신용|파이어족|자산|투자|가계부|생활비|지출|통장|경매|공매|코인|비트코인|ISA|IRP|퇴직|국민연금|건강보험|실업급여|지원금|보조금|물가|인플레|경제|시황|매수|매도|수익률|손실|원리금|부자|돈|억|만원|재산|월세|임대|세입자|집값|아파트값)/},
+  life:{label:'🎨 생활·자기계발',re:/(직장|회사|퇴사|이직|면접|자소서|승진|상사|동료|인간관계|대화법|말투|설득|거절|화법|습관|루틴|아침|독서|책|공부|자격증|영어|시간관리|집중|생산성|정리|미니멀|청소|살림|요리|자취|원룸|인테리어|다이어트|운동|헬스|러닝|스트레칭|자세|수면|육아|아이|초등|사춘기|부부|결혼|연애|이별|친구|성격|MBTI|자존감|후회|실패|성공|목표|계획|기록|여행|캠핑|중고차|스마트폰|노트북|가전|구독|배달|편의점|마트|생활|꿀팁|리뷰|후기|비교|추천)/},
+  custom:{label:'직접 입력 — 내 주제 단어',re:null}
+};
+let TOPIC_MODE='all', TOPIC_CUSTOM='';
+function loadTopic(){
+  TOPIC_MODE=P().topic||'all';
+  TOPIC_CUSTOM=P().custom||'';
+  const s=document.getElementById('topicMode');if(s)s.value=TOPIC_MODE;
+  const c=document.getElementById('topicCustom');
+  if(c){c.value=TOPIC_CUSTOM;c.style.display=TOPIC_MODE==='custom'?'block':'none';}
+}
+function customRe(){
+  const words=TOPIC_CUSTOM.split(/[,\n]/).map(s=>s.trim()).filter(s=>s.length>=2)
+    .map(s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'));
+  return words.length?new RegExp('('+words.join('|')+')','i'):null;
+}
+function topicRe(mode){
+  const m=mode||TOPIC_MODE;
+  if(m==='custom')return customRe();
+  return TOPIC_SETS[m]?.re||null;
+}
+function updTopicNote(){
+  const n=document.getElementById('topicNote');if(!n)return;
+  if(TOPIC_MODE==='all'){n.textContent='주제 축(20점)을 빼고 남은 80점으로 재정규화합니다.';return;}
+  if(TOPIC_MODE==='custom'){
+    const re=customRe();
+    n.textContent=re?`단어 ${TOPIC_CUSTOM.split(/[,\n]/).filter(s=>s.trim().length>=2).length}개로 판정합니다. 직접 입력은 제목 원문이 아니라 저장된 대표 토큰으로 맞춰 보는 근사값입니다.`
+      :'두 글자 이상 단어를 쉼표로 구분해 넣으세요. 10~30개면 충분합니다.';
+    return;
+  }
+  n.textContent=`${TOPIC_SETS[TOPIC_MODE].label} 사전으로 채널명과 최근 제목 50개를 대조합니다.`;
+}
+function updTopicScope(){
+  const el=document.getElementById('topicScope');
+  if(el)el.textContent=`${P().emoji} ${P().name} 프로필 · ${isShorts()?'쇼츠':'롱폼'} 기준`;
+}
+function setTopic(){
+  TOPIC_MODE=document.getElementById('topicMode').value;
+  TOPIC_CUSTOM=(document.getElementById('topicCustom')?.value||'').trim();
+  P().topic=TOPIC_MODE;P().custom=TOPIC_CUSTOM;saveProfiles();
+  const c=document.getElementById('topicCustom');
+  if(c)c.style.display=TOPIC_MODE==='custom'?'block':'none';
+  updTopicNote();
+  // 이미 조사해 둔 채널은 다시 API를 부르지 않고 저장된 토큰으로 재채점한다
+  Object.values(QUEUE).forEach(scoreProfile);
+  Object.values(WL).forEach(scoreProfile);
+  saveQueue();saveWL();renderQueue();renderWatch();
+  toast(TOPIC_MODE==='all'?'주제를 보지 않고 구조만으로 채점합니다.'
+    :`주제 「${TOPIC_SETS[TOPIC_MODE].label}」 기준으로 ${Object.keys(QUEUE).length+Object.keys(WL).length}개 채널을 다시 채점했습니다.`);
+}
+/* 저장된 제목 토큰과 채널명으로 주제 적합도를 낸다.
+   샘플 제목 전체를 보관하면 채널 1,000개에서 localStorage가 감당하지 못하므로
+   ① 내장 세트 2종은 조사 시점에 제목별 적중률을 계산해 숫자로 보관하고
+   ② 직접 입력용으로는 대표 토큰 24개만 남긴다 (근사값이며 화면에 그렇게 표시한다). */
+function topicFit(p){
+  const mode=TOPIC_MODE;
+  if(mode==='all'){p.topicHit=null;p.topicApprox=false;return null;}
+  const nameHit=(()=>{const re=topicRe();return re?(re.test(p.title||'')?1:0):0;})();
+  if(mode!=='custom'&&p.topicRate&&p.topicRate[mode]!=null){
+    p.topicApprox=false;
+    p.topicHit=Math.min(1,p.topicRate[mode]*1.6+nameHit*0.25);
+    return p.topicHit;
+  }
+  const re=topicRe();
+  if(!re){p.topicHit=null;p.topicApprox=false;return null;}
+  const toks=(p.tok||'').split(' ').filter(Boolean);
+  if(!toks.length){
+    p.topicApprox=true;
+    p.topicHit=nameHit?0.65:null;      // 조사 전이면 채널명만으로는 단정하지 않는다
+    return p.topicHit;
+  }
+  p.topicApprox=true;
+  const hit=toks.filter(t=>re.test(t)).length;
+  p.topicHit=Math.min(1,(hit/toks.length)*3.2+nameHit*0.25);
+  return p.topicHit;
+}
 /* 업로드 샘플로 프로파일을 채운다 */
 function deepenProfile(p,sample){
   const vids=(sample||[]).filter(v=>v.dur>0);
   if(!vids.length)return p;
   p.sampleN=vids.length;
+  const titles=vids.map(v=>v.title||'');
+  p.topicRate={
+    money:titles.filter(t=>TOPIC_SETS.money.re.test(t)).length/titles.length,
+    life:titles.filter(t=>TOPIC_SETS.life.re.test(t)).length/titles.length
+  };
+  // 직접 입력 주제용 대표 토큰 — 빈도순 24개만
+  const freq={};
+  titles.forEach(t=>titleTokens(t).forEach(w=>freq[w]=(freq[w]||0)+1));
+  p.tok=Object.entries(freq).sort((a,b)=>b[1]-a[1]).slice(0,24).map(([w])=>w).join(' ');
   p.medianDur=median(vids.map(v=>v.dur));
   p.longRatio=vids.filter(v=>formatOf(v.dur)==='long').length/vids.length;
   p.medViews=median(vids.map(v=>v.views||0));
@@ -1317,22 +1632,35 @@ function deepenProfile(p,sample){
    그래서 채널 단위로 판정해 워치리스트 진입 자체를 막는다. */
 function reeditScore(p){
   let s=0;const why=[];
+  const shorts=isShorts();
   const upw=p.uploadsPerWeek;
   if(upw!=null){
-    if(upw>=35){s+=35;why.push(`주 ${Math.round(upw)}편 — 사람이 기획해 만드는 속도가 아님`);}
-    else if(upw>=14){s+=25;why.push(`주 ${Math.round(upw)}편 업로드`);}
-    else if(upw>=7){s+=12;why.push(`주 ${upw.toFixed(1)}편 업로드`);}
+    if(shorts){
+      /* 쇼츠 프로필에서는 잦은 업로드가 정상이다. 사람이 찍어 올릴 수 없는
+         극단치(하루 10편 이상)만 양산형으로 본다. */
+      if(upw>=70){s+=30;why.push(`주 ${Math.round(upw)}편 — 쇼츠 기준으로도 자동 생성 의심`);}
+      else if(upw>=40){s+=15;why.push(`주 ${Math.round(upw)}편 업로드`);}
+    }else{
+      if(upw>=35){s+=35;why.push(`주 ${Math.round(upw)}편 — 사람이 기획해 만드는 속도가 아님`);}
+      else if(upw>=14){s+=25;why.push(`주 ${Math.round(upw)}편 업로드`);}
+      else if(upw>=7){s+=12;why.push(`주 ${upw.toFixed(1)}편 업로드`);}
+    }
   }
-  if(p.longRatio!=null){
+  if(p.longRatio!=null&&!shorts){
     const shortPct=Math.round((1-p.longRatio)*100);
     if(p.longRatio<0.15){s+=28;why.push(`샘플의 ${shortPct}%가 3분 이하`);}
     else if(p.longRatio<0.35){s+=17;why.push(`샘플의 ${shortPct}%가 3분 이하`);}
   }
-  if(p.medianDur!=null&&p.medianDur<=75&&p.medianDur>0){s+=10;why.push(`중앙 길이 ${durLabel(p.medianDur)}`);}
-  if(p.titleRepeat!=null){
-    if(p.titleRepeat>=0.45){s+=22;why.push(`제목 반복도 ${Math.round(p.titleRepeat*100)}% — 같은 틀 반복`);}
-    else if(p.titleRepeat>=0.30){s+=13;why.push(`제목 반복도 ${Math.round(p.titleRepeat*100)}%`);}
+  if(!shorts&&p.medianDur!=null&&p.medianDur<=75&&p.medianDur>0){
+    s+=10;why.push(`중앙 길이 ${durLabel(p.medianDur)}`);
   }
+  if(p.titleRepeat!=null){
+    /* 쇼핑 쇼츠는 「이거 진짜 싸요 #17」처럼 제목 틀이 반복되는 게 포맷 특성이다 */
+    const hi=shorts?0.60:0.45, mid=shorts?0.45:0.30, wHi=shorts?12:22, wMid=shorts?7:13;
+    if(p.titleRepeat>=hi){s+=wHi;why.push(`제목 반복도 ${Math.round(p.titleRepeat*100)}% — 같은 틀 반복`);}
+    else if(p.titleRepeat>=mid){s+=wMid;why.push(`제목 반복도 ${Math.round(p.titleRepeat*100)}%`);}
+  }
+  /* 아래 세 가지는 형태와 무관하게 '남의 영상을 재편집한 채널' 신호다 */
   if(p.reKwRate!=null){
     if(p.reKwRate>=0.5){s+=25;why.push(`제목의 ${Math.round(p.reKwRate*100)}%에 모음·하이라이트류 단어`);}
     else if(p.reKwRate>=0.25){s+=14;why.push(`제목의 ${Math.round(p.reKwRate*100)}%에 모음·하이라이트류 단어`);}
@@ -1360,21 +1688,46 @@ function activityFit(lastUploadAt){
   if(d<=SET.dormantDays)return 0.45;
   return 0;
 }
+/* 워치리스트 적합도 — 높을수록 매일 볼 가치가 있다.
+   주제를 '무관'으로 두면 그 축을 빼고 남은 축으로 재정규화한다 (영상 점수와 같은 방식). */
+function fitAxes(){
+  return [
+    {k:'clean', w:26, label:'재편집 아님'},
+    {k:'topic', w:20, label:'내 주제와 겹침'},
+    {k:'subs',  w:16, label:'구독자 구간'},
+    {k:'long',  w:16, label:isShorts()?'쇼츠 비율':'롱폼 비율'},
+    {k:'act',   w:8,  label:'활동성'},
+    {k:'perf',  w:8,  label:'평소 성과'},
+    {k:'hits',  w:6,  label:'아웃라이어 배출'}
+  ];
+}
+const FIT_AXES=fitAxes();   // 가중치 검증용 (라벨은 프로필에 따라 바뀐다)
 function scoreProfile(p){
   reeditScore(p);
-  const clean=1-Math.min(1,p.reedit/100);
-  const longFit=p.longRatio==null?0.5:Math.min(1,p.longRatio/0.7);
-  const act=activityFit(p.lastUploadAt);
   let perf=0.4;
   if(p.subs>0&&p.medViews!=null){
     const ratio=p.medViews/Math.max(1,p.subs);            // 평소 조회 / 구독
     perf=Math.min(1,Math.log10(1+ratio*20)/Math.log10(11));
   }
-  const hit=Math.min(1,(p.hits||0)/5);                    // 아웃라이어 배출 이력
-  const parts=[[32,clean],[20,subBandFit(p.subs)],[18,longFit],[10,act],[12,perf],[8,hit]];
-  p.fit=Math.round(parts.reduce((a,[w,v])=>a+w*v,0));
+  p.fitParts={
+    clean:1-Math.min(1,p.reedit/100),
+    topic:topicFit(p),                                    // 주제 무관이면 null → 축 제외
+    subs:subBandFit(p.subs),
+    long:p.longRatio==null?0.5:(isShorts()?Math.min(1,(1-p.longRatio)/0.7):Math.min(1,p.longRatio/0.7)),
+    act:activityFit(p.lastUploadAt),
+    perf,
+    hits:Math.min(1,(p.hits||0)/5)
+  };
+  let s=0,w=0;
+  fitAxes().forEach(ax=>{
+    const v=p.fitParts[ax.k];
+    if(v!=null&&isFinite(v)){s+=ax.w*v;w+=ax.w;}
+  });
+  p.fit=w?Math.round(s/w*100):0;
   p.blocked=p.reedit>=SET.reeditBlock;
   p.dormant=!!p.lastUploadAt&&(Date.now()-p.lastUploadAt)/86400000>SET.dormantDays;
+  /* 주제가 명백히 다르면 차단은 하지 않되(오탐 가능) 눈에 띄게 표시한다 */
+  p.offTopic=p.topicHit!=null&&p.topicHit<0.2&&p.sampleN>0;
   return p.fit;
 }
 
@@ -1491,10 +1844,16 @@ function chCard(p,mode){
   const sig=[];
   if(p.blocked)sig.push('<span class="pill p-bad">🚫 재편집 의심 '+p.reedit+'</span>');
   else if(p.reedit>=35)sig.push('<span class="pill p-warn">주의 '+p.reedit+'</span>');
+  if(p.topicHit!=null){
+    const pc=Math.round(p.topicHit*100);
+    sig.push(p.topicHit>=0.5?`<span class="pill p-ok">🎯 주제 ${pc}%</span>`
+      :p.topicHit>=0.2?`<span class="pill p-neu">주제 ${pc}%</span>`
+      :`<span class="pill p-warn">🎯 주제 ${pc}% — 다른 분야</span>`);
+  }
   if(p.dormant)sig.push('<span class="pill p-neu">💤 휴면</span>');
   if(p.paused)sig.push('<span class="pill p-neu">⏸ 스캔 제외</span>');
   if(p.hits)sig.push('<span class="pill p-arc">아웃라이어 '+p.hits+'</span>');
-  if(p.longRatio!=null)sig.push('<span class="pill p-neu">롱폼 '+Math.round(p.longRatio*100)+'%</span>');
+  if(p.longRatio!=null)sig.push('<span class="pill p-neu">'+(isShorts()?'쇼츠 '+Math.round((1-p.longRatio)*100):'롱폼 '+Math.round(p.longRatio*100))+'%</span>');
   if(p.subs!=null&&p.subs<=3000&&p.vids<=30)sig.push('<span class="pill p-ok">🐣 신생</span>');
   const acts=mode==='queue'
     ? `<button class="btn btn-sm ${p.blocked?'':'btn-ink'}" onclick="promote('${p.id}')">${p.blocked?'그래도 승격':'✓ 승격'}</button>
@@ -1529,6 +1888,7 @@ function renderWatch(){
   if(filt==='active')list=list.filter(p=>!p.dormant&&!p.paused);
   else if(filt==='dormant')list=list.filter(p=>p.dormant);
   else if(filt==='suspect')list=list.filter(p=>p.reedit>=35);
+  else if(filt==='offtopic')list=list.filter(p=>p.offTopic);
   else if(filt==='nohit')list=list.filter(p=>!p.hits);
   const cmp={
     hits:(a,b)=>(b.hits||0)-(a.hits||0)||(b.fit||0)-(a.fit||0),
@@ -1554,7 +1914,8 @@ function renderQueue(){
   const grid=document.getElementById('queueGrid'),empty=document.getElementById('queueEmpty');
   if(!grid)return;
   const sort=document.getElementById('qSort')?.value||'fit';
-  const cmp={fit:(a,b)=>(b.fit||0)-(a.fit||0),subs:(a,b)=>(b.subs??-1)-(a.subs??-1),reedit:(a,b)=>(b.reedit||0)-(a.reedit||0)}[sort];
+  const cmp={fit:(a,b)=>(b.fit||0)-(a.fit||0),subs:(a,b)=>(b.subs??-1)-(a.subs??-1),
+    reedit:(a,b)=>(b.reedit||0)-(a.reedit||0),topic:(a,b)=>(b.topicHit??-1)-(a.topicHit??-1)}[sort];
   const list=Object.values(QUEUE).sort(cmp);
   const shown=list.slice(0,qLimit);
   grid.innerHTML=shown.map(p=>chCard(p,'queue')).join('');
@@ -1577,14 +1938,14 @@ function updWlStats(){
   // playlistItems 페이지 수 + videos 상세 배치 수 = 채널당 ceil(깊이/50) × 2
   const depth=Number(document.getElementById('scanDepth')?.value||SET.depth);
   set('wlCost',(targets.length*Math.ceil(depth/50)*2).toLocaleString());
-  const last=Number(load('v4_lastScan')||0);
+  const last=Number(load(pKey('v4_lastScan'))||0);
   set('wlLast',last?ageLabel((Date.now()-last)/3600000):'—');
   set('wlLastSub',last?new Date(last).toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}):'아직 스캔 전');
   renderSteps();
   paintQuota();
 }
 function renderSteps(){
-  const wl=wlArray().length, q=Object.keys(QUEUE).length, last=Number(load('v4_lastScan')||0);
+  const wl=wlArray().length, q=Object.keys(QUEUE).length, last=Number(load(pKey('v4_lastScan'))||0);
   const set=(id,txt)=>{const el=document.getElementById(id);if(el)el.textContent=txt;};
   set('stepD1',wl>=20?'✓':'');
   set('stepS1',wl?`${wl}개 등록 · 스캔 대상 ${scanTargets().length}개`:'전수 스캔할 정예 채널을 관리합니다');
@@ -1837,6 +2198,7 @@ function makeVideo(b,ch,source){
     ageHours,lvph:(b.views||0)/Math.max(ageHours,1),
     rvph:null,accel:null,snapAt:null,cluster:0,
     source:source||'워치리스트',
+    pid:PID,
     observedAt:b.observedAt||Date.now(),
     discoveredAt:Date.now()
   };
@@ -1912,7 +2274,7 @@ async function runScan(){
     CLUSTERS=buildClusters(ALL);
     countHits();
     await dbPutMany('videos',ALL.slice(0,4000));
-    store('v4_lastScan',String(Date.now()));
+    store(pKey('v4_lastScan'),String(Date.now()));
     setProg('scanProg','scanStatus',
       `완료 — ${targets.length}채널 전수 · 새 후보 ${rows.length.toLocaleString()}건 · 아웃라이어 배출 ${hitCh}채널 · 사용 쿼터 약 ${(targets.length*perCh).toLocaleString()}유닛`,100);
     renderDiag('scanDiag');
@@ -1930,7 +2292,8 @@ async function runScan(){
 /* 채널별 아웃라이어 배출 이력 — 워치리스트 적합도에 반영된다 */
 function countHits(){
   const cnt={};
-  ALL.forEach(v=>{if(v.score>=75&&v.format==='long')cnt[v.channelId]=(cnt[v.channelId]||0)+1;});
+  const want=isShorts()?'short':'long';
+  ALL.forEach(v=>{if(v.score>=75&&v.format===want)cnt[v.channelId]=(cnt[v.channelId]||0)+1;});
   Object.values(WL).forEach(p=>{p.hits=cnt[p.id]||0;scoreProfile(p);});
   saveWL();
 }
@@ -2065,21 +2428,23 @@ function buildClusters(list){
 const SEED_MONEY=['월급','절약','재테크','적금','예금','연금','노후','부동산','아파트','전세','청약','대출','금리','주식','미국주식','배당주','ETF','코스피','환율','달러','금값','반도체','부업','투잡','창업','자영업','폐업','세금','연말정산','종합소득세','상속','증여','보험','실비보험','신용점수','파이어족','경제적자유','물가','인플레이션','부자','자산','투자','재무설계','가계부','짠테기','생활비','고정지출','통장쪼개기','주택담보대출','전세사기','갭투자','재건축','재개발','상가','토지','경매','공매','비트코인','코인','채권','펀드','ISA','IRP','퇴직연금','국민연금','건강보험료','실업급여','청년지원','정부지원금','대출규제','DSR'];
 const SEED_LIFE=['직장생활','퇴사','이직','면접','자소서','승진','회사생활','상사','인간관계','대화법','말투','설득','거절','습관','루틴','아침','미라클모닝','독서','책추천','공부법','자격증','영어공부','시간관리','집중력','생산성','정리정돈','미니멀','청소','요리','자취','원룸','인테리어','다이어트','운동','헬스','러닝','스트레칭','자세','수면','아침형','부모','육아','신생아','유치원','초등','사춘기','부부','결혼','연애','이별','친구','성격','MBTI','불안','번아웃','자존감','후회','실패','성공','목표','계획','기록','반성','여행','캠핑','차량','중고차','스마트폰','노트북','가전','구독서비스','배달','편의점','마트'];
 
+const SEED_SHOP=['특가','할인','최저가','핫딜','세일','인기상품','추천템','꿀템','잇템','가성비','내돈내산','언박싱','리뷰','후기','신상','품절','재입고','공동구매','직구','쿠팡','다이소','올리브영','이케아','코스트코','생활용품','주방용품','수납','청소용품','욕실용품','캠핑용품','차량용품','반려용품','유아용품','문구','가전','소형가전','에어프라이어','로봇청소기','건조기','제습기','선풍기','히터','이어폰','충전기','보조배터리','키보드','마우스','모니터','의자','책상','매트리스','베개','이불','수건','텀블러','보온병','도시락','밀키트','간식','커피','영양제','화장품','선크림','샴푸','칫솔','속옷','양말','운동화','가방','지갑','시계'];
 function mineSeeds(){
   const src=document.getElementById('mineSrc').value;
   const n=Number(document.getElementById('mineCount').value||20);
   let pool;
   if(src==='seed')pool=SEED_MONEY;
   else if(src==='life')pool=SEED_LIFE;
-  else if(src==='mix')pool=[...SEED_MONEY,...SEED_LIFE];
-  else if(src==='hot')pool=lastHotWords.length?lastHotWords:SEED_MONEY;
+  else if(src==='shop')pool=SEED_SHOP;
+  else if(src==='mix')pool=isShorts()?[...SEED_SHOP,...SEED_LIFE]:[...SEED_MONEY,...SEED_LIFE];
+  else if(src==='hot')pool=lastHotWords.length?lastHotWords:(isShorts()?SEED_SHOP:SEED_MONEY);
   else pool=(document.getElementById('mineCustom').value||'').split(/[,\n]/).map(s=>s.trim()).filter(Boolean);
   if(!pool.length)return [];
   // 실행마다 시드가 순환하도록 오프셋을 저장한다
-  const off=Number(load('v4_seedOff')||0);
+  const off=Number(load(pKey('v4_seedOff'))||0);
   const out=[];
   for(let i=0;i<Math.min(n,pool.length);i++)out.push(pool[(off+i)%pool.length]);
-  store('v4_seedOff',String((off+n)%pool.length));
+  store(pKey('v4_seedOff'),String((off+n)%pool.length));
   return out;
 }
 function updMineCost(){
@@ -2172,6 +2537,10 @@ async function reselect(){
       scoreProfile(p);
       if(p.reedit>=85)return;                       // 1단계에서 이미 명백한 양산형
       stage1.push(p);
+      /* 채널명이 주제와 겹치면 2단계 우선순위를 올린다 — 1단계에는 제목 표본이 없어
+         이것 말고는 주제를 알 방법이 없다. 2단계에서 제목 50개로 다시 판정한다. */
+      const tre=topicRe();
+      if(tre&&tre.test(p.title||''))p.fit=Math.min(100,p.fit+6);
     });
     savePool();
     stage1.sort((a,b)=>(b.fit||0)-(a.fit||0));
@@ -2186,14 +2555,16 @@ async function reselect(){
       }catch(e){if(isQuotaErr(e)||e.fatal)throw e;diagAdd('정밀 조사 실패 · '+p.title,0,e);}
       done++;
     },(d,t)=>setProg('reProg','reStatus',`2단계 ${d}/${t}채널 · 쿼터 ${Q.core.toLocaleString()}`,48+d/t*50));
-    let queued=0,blocked=0;
+    let queued=0,blocked=0,off=0;
     deep.forEach(p=>{
       if(p.blocked)blocked++;
+      if(p.offTopic)off++;
       QUEUE[p.id]={...p,queuedAt:Date.now(),src:'재선별'};queued++;
     });
     saveQueue();renderQueue();
     setProg('reProg','reStatus',
-      `완료 — 1단계 통과 ${stage1.length.toLocaleString()} · 정밀 조사 ${deep.length} · 큐 ${queued}개 (재편집 의심 ${blocked}개 자동 차단)`,100);
+      `완료 — 1단계 통과 ${stage1.length.toLocaleString()} · 정밀 조사 ${deep.length} · 큐 ${queued}개`
+      +` (재편집 의심 ${blocked}개 자동 차단${TOPIC_MODE==='all'?'':` · 주제 다름 ${off}개 표시`})`,100);
     switchTab('scout');
     toast(`승격 큐 ${queued}개. 「적합도 60 이상 일괄 승인」으로 워치리스트를 채우세요.`);
   }catch(e){setProg('reProg','reStatus','중단됨',100);showErr(e.message);}
@@ -2242,6 +2613,17 @@ async function expandFeatured(){
 function numOf(id){const el=document.getElementById(id);const v=el?el.value:'';return v===''?null:Number(v);}
 function setVal(id,v){const el=document.getElementById(id);if(el)el.value=v==null?'':v;}
 
+/* 프로필의 형태에 맞춰 프리셋 기본값을 갈아 끼운다.
+   쇼핑 쇼츠 프로필에서 「롱폼 대박」을 기본으로 두면 결과가 항상 0건이 된다. */
+function applyPresetDefaults(){
+  const shorts=isShorts();
+  const btn=document.getElementById('pLong');
+  if(btn)btn.textContent=shorts?'🛒 쇼츠 대박':'🎬 롱폼 대박';
+  const rk=document.getElementById('pRookie');
+  if(rk)rk.textContent='🐣 신생 채널';
+  const sel=document.getElementById('fForm');
+  if(sel)sel.options[0].textContent=shorts?'≤3분 후보만':'롱폼만';
+}
 function preset(k){
   activePreset=k;
   ['All','Long','Rookie','Accel','Fresh','Cluster'].forEach(n=>{
@@ -2249,18 +2631,22 @@ function preset(k){
     if(el)el.classList.toggle('on',n.toLowerCase()===k);
   });
   setVal('fSubs','');setVal('fViews','');setVal('fVps','');setVal('fOut','');setVal('fScore','');
+  const shorts=isShorts(), main=shorts?'short':'long';
   const form=document.getElementById('fForm');
   if(k==='all'){form.value='all';}
-  else if(k==='long'){form.value='long';setVal('fSubs',SET.preSubs);setVal('fViews',50000);setVal('fVps',2);}
-  else if(k==='rookie'){form.value='long';setVal('fViews',10000);}
-  else if(k==='accel'){form.value='all';}
-  else if(k==='fresh'){form.value='all';}
-  else if(k==='cluster'){form.value='all';}
+  else if(k==='long'){
+    form.value=main;
+    setVal('fSubs',SET.preSubs);
+    setVal('fViews',shorts?100000:50000);   // 쇼츠는 조회수 체급이 다르다
+    setVal('fVps',shorts?3:2);
+  }
+  else if(k==='rookie'){form.value=main;setVal('fViews',shorts?30000:10000);}
+  else{form.value='all';}
   applyFilters();
 }
 function resetFilters(){
   setVal('fSubs','');setVal('fViews','');setVal('fVps','');setVal('fOut','');setVal('fScore','');
-  document.getElementById('fForm').value='long';
+  document.getElementById('fForm').value=isShorts()?'short':'long';
   document.getElementById('fSort').value='score';
   activePreset='long';preset('long');
 }
@@ -2330,7 +2716,8 @@ function applyFilters(){
 function renderStrip(){
   const el=document.getElementById('outStrip');if(!el)return;
   if(!ALL.length){el.innerHTML='';return;}
-  const long=VIEW.filter(v=>v.format==='long').length;
+  const want=isShorts()?'short':'long';
+  const long=VIEW.filter(v=>v.format===want).length;
   const med=median(VIEW.map(v=>v.views));
   const withBase=VIEW.filter(v=>v.cOut!=null).length;
   const full=VIEW.filter(v=>v.conf>=0.99).length;
@@ -2338,11 +2725,11 @@ function renderStrip(){
     <div class="stat"><span class="k">표시</span><span class="v em">${VIEW.length.toLocaleString()}</span><span class="sub">/ 로드 ${ALL.length.toLocaleString()}건</span></div>
     <div class="stat"><span class="k">가려짐</span><span class="v">${EXCLUDED.length.toLocaleString()}</span><span class="sub">제외 사유 보기</span></div>
     <div class="stat"><span class="k">중앙 조회수</span><span class="v">${fmt(med)}</span><span class="sub">${med<3000?'⚠ 표본 품질 낮음':'정상'}</span></div>
-    <div class="stat"><span class="k">롱폼</span><span class="v">${long.toLocaleString()}</span><span class="sub">${VIEW.length?Math.round(long/VIEW.length*100):0}%</span></div>
+    <div class="stat"><span class="k">${isShorts()?'쇼츠':'롱폼'}</span><span class="v">${long.toLocaleString()}</span><span class="sub">${VIEW.length?Math.round(long/VIEW.length*100):0}%</span></div>
     <div class="stat"><span class="k">근거 4축 완비</span><span class="v">${full.toLocaleString()}</span><span class="sub">채널배수 있음 ${withBase.toLocaleString()}</span></div>`;
   const meta=document.getElementById('outMeta');
   if(meta){
-    const last=Number(load('v4_lastScan')||0);
+    const last=Number(load(pKey('v4_lastScan'))||0);
     meta.textContent=(last?`마지막 스캔 ${ageLabel((Date.now()-last)/3600000)} · `:'')
       +`백분위는 로드된 ${ALL.length.toLocaleString()}건 안의 상대 순위입니다`;
   }
@@ -2409,7 +2796,7 @@ function renderOut(){
   const el=document.getElementById('outBody');if(!el)return;
   if(!ALL.length){
     el.innerHTML=`<div class="empty"><div class="ic">🔭</div><b>아직 스캔 결과가 없습니다</b>
-      <p>① 워치리스트에 채널을 올리고 <b>전수 스캔</b>을 돌리세요. 채널 300개면 약 600유닛, 하루 쿼터의 6%입니다.</p>
+      <p>① 워치리스트에 채널을 올리고 <b>전수 스캔</b>을 돌리세요. 채널 1,000개면 약 2,000유닛, 하루 쿼터의 20%입니다.</p>
       <div class="row" style="justify-content:center;margin-top:16px">
         <button class="btn btn-arc" onclick="switchTab('watch')">① 워치리스트로</button>
         <button class="btn" onclick="switchTab('scout')">② 채널 발굴하기</button></div></div>`;
@@ -2668,12 +3055,21 @@ function openChannel(id,mode){
   openModal('채널 근거 — '+p.title,`
     <div class="evgrid">
       <div class="evbox"><h5>워치 적합도 ${p.fit??'—'} / 100</h5>
-        <div class="kv"><span>재편집 아님 (32)</span><b>${(100-(p.reedit||0))}%</b></div>
-        <div class="kv"><span>구독자 구간 (20)</span><b>${p.subs==null?'비공개':fmt(p.subs)}</b></div>
-        <div class="kv"><span>롱폼 비율 (18)</span><b>${p.longRatio!=null?Math.round(p.longRatio*100)+'%':'미조사'}</b></div>
-        <div class="kv"><span>활동성 (10)</span><b>${p.lastUploadAt?ageLabel((Date.now()-p.lastUploadAt)/3600000):'—'}</b></div>
-        <div class="kv"><span>평소 성과 (12)</span><b>${p.medViews!=null?fmt(p.medViews)+'회':'미조사'}</b></div>
-        <div class="kv"><span>배출 이력 (8)</span><b>${p.hits||0}건</b></div>
+        ${fitAxes().map(ax=>{
+          const v=p.fitParts?.[ax.k];
+          const raw={clean:`재편집 ${p.reedit||0}점`,
+            topic:p.topicHit==null?'주제 무관 설정':Math.round((p.topicHit||0)*100)+'% 겹침'+(p.topicApprox?' (근사)':''),
+            subs:p.subs==null?'비공개':fmt(p.subs)+'명',
+            long:p.longRatio!=null?Math.round((isShorts()?1-p.longRatio:p.longRatio)*100)+'%':'미조사',
+            act:p.lastUploadAt?ageLabel((Date.now()-p.lastUploadAt)/3600000):'—',
+            perf:p.medViews!=null?'평소 '+fmt(p.medViews)+'회':'미조사',
+            hits:(p.hits||0)+'건'}[ax.k];
+          return `<div class="ax" style="grid-template-columns:104px 1fr auto;margin-bottom:7px">
+            <span class="an">${ax.label} · ${ax.w}</span>
+            <span class="track${v==null?' na':''}"><i style="width:${v==null?100:Math.round(v*100)}%"></i></span>
+            <span class="val" style="min-width:130px">${v==null?'<span class="muted">축 제외 · '+raw+'</span>':`<b>${raw}</b>`}</span></div>`;
+        }).join('')}
+        <p class="hint">주제 축을 빼면 남은 축으로 재정규화합니다. ② 후보 발굴 맨 위에서 주제를 바꾸면 API 재호출 없이 전부 다시 채점됩니다.</p>
       </div>
       <div class="evbox"><h5>재편집·짤 채널 판정 ${p.reedit??'—'} / 100</h5>
         ${sig.length?sig.map(s=>`<div class="kv"><span>${esc(s)}</span><b>⚠</b></div>`).join(''):'<p class="hint" style="margin:0">해당 신호 없음</p>'}
@@ -2703,7 +3099,8 @@ function openChannel(id,mode){
    ══════════════════════════════════════════════════════════════════ */
 const BM_LABEL={title:'제목 참고',thumb:'썸네일 참고',topic:'소재 참고',all:'종합 참고'};
 async function loadBoard(){
-  BOARD=await dbAll('benchmarks');
+  const first=Object.keys(PROFILES||{})[0]||PID;   // 프로필 이전 기록은 첫 프로필 소유
+  BOARD=(await dbAll('benchmarks')).filter(b=>(b.pid||first)===PID);
   BOARD.sort((a,b)=>(b.savedAt||0)-(a.savedAt||0));
   BM.clear();BOARD.forEach(b=>BM.add(b.id));
   const d=document.getElementById('dotBoard');if(d)d.textContent=BOARD.length;
@@ -2739,7 +3136,7 @@ async function saveBenchmark(id){
   const type=document.querySelector('[data-t].on')?.dataset.t||'title';
   const tags=(document.getElementById('bmTags').value||'').split(',').map(s=>s.trim()).filter(Boolean);
   const memo=document.getElementById('bmMemo').value||'';
-  const rec={id,type,tags,memo,savedAt:BOARD.find(b=>b.id===id)?.savedAt||Date.now(),video:{...v}};
+  const rec={id,type,tags,memo,pid:PID,savedAt:BOARD.find(b=>b.id===id)?.savedAt||Date.now(),video:{...v}};
   await dbPut('benchmarks',rec);
   // 저장 시점의 조회수를 첫 스냅샷으로 남긴다
   const s=await dbGet('snapshots',id)||{id,snaps:[]};
@@ -2780,7 +3177,7 @@ function renderBoard(){
       </div></div>`;
   }).join('');
 }
-const AI_HEAD=`당신은 한국 유튜브 콘텐츠 기획자입니다. 아래 레퍼런스는 '겨울잠'(직장인 · 투자·생활 주제 채널 준비 중)이 직접 골라 저장한 벤치마크입니다.`;
+const AI_HEAD=`당신은 한국 유튜브 콘텐츠 기획자입니다. 아래 레퍼런스는 채널 운영자가 직접 골라 저장한 벤치마크입니다.`;
 const AI_RULES=`규칙
 - 레퍼런스 제목을 복제하지 말고 구조만 이식할 것
 - 확인되지 않은 수치를 만들어내지 말 것. 근거가 필요한 문장은 [확인 필요]로 표시
@@ -2792,29 +3189,50 @@ function boardRows(){
     return `${i+1}. 「${v.title}」
    채널 ${v.channel} · 구독 ${v.subs==null?'비공개':fmt(v.subs)} · 조회 ${fmt(v.views)} · 조회/구독 ${v.vps==null?'—':'×'+Number(v.vps).toFixed(2)} · 채널배수 ${v.cOut==null?'—':'×'+Number(v.cOut).toFixed(1)} · 길이 ${durLabel(v.dur)}
    참고 유형: ${BM_LABEL[b.type]||''} / 태그: ${(b.tags||[]).join(' ')||'없음'}
-   겨울잠 메모: ${b.memo||'(없음)'}`;
+   운영자 메모: ${b.memo||'(없음)'}`;
   });
 }
-function buildScriptPrompt(){
-  const list=boardList();
-  return `${AI_HEAD}
-
-아래는 겨울잠이 직접 골라 저장한 벤치마크 레퍼런스 ${list.length}개입니다. 메모와 태그는 겨울잠 본인의 판단입니다.
-
-${boardRows().join('\n')}
-
-이 레퍼런스 전체를 근거로 다음을 만드세요. 목표 포맷은 8~12분 롱폼(쇼츠 아님)입니다.
-
-1. 공통 패턴 3줄 — 이 레퍼런스들이 클릭된 공통 장치(정보격차·숫자·비교·역발상·공포/욕망 중 무엇)
-2. 겨울잠용 주제 5개 — 각 주제마다 ①참고한 레퍼런스 번호 ②왜 지금 통하는지 1줄 ③겨울잠의 경험·데이터로 뒷받침 가능한 근거
-3. 주제별 제목 3안 — 원본 복제 금지, 구조만 이식. 30자 이내. 숫자 1개 이상 포함
-4. 가장 유망한 주제 1개를 골라 스크립트 —
+/* 목표 포맷은 프로필을 따른다 — 쇼핑 쇼츠 레퍼런스에서 12분 롱폼 대본을 뽑으면 쓸모가 없다 */
+const SCRIPT_SPEC={
+  long:{
+    goal:'8~12분 롱폼(쇼츠 아님)',
+    body:`4. 가장 유망한 주제 1개를 골라 스크립트 —
    [0~15초 훅] 첫 문장은 시청자 손해·오해·숫자로 시작
    [도입 30초] 이 영상에서 얻는 것 1줄 + 신뢰 근거
    [본론 3파트] 파트마다 소제목 · 핵심 숫자 · 사례 1개 · 시청자 행동 1개. 파트 사이 리텐션 브릿지 문장
    [결론 45초] 요약 3줄 → 다음 행동 1개 → 다음 영상 예고
    전체 2,000~2,500자, 말하듯이, 문장은 짧게
-5. 썸네일 문구 3안 (7자 이내) — 제목과 겹치지 않게
+5. 썸네일 문구 3안 (7자 이내) — 제목과 겹치지 않게`
+  },
+  short:{
+    goal:'30~60초 세로 쇼츠',
+    body:`4. 가장 유망한 주제 3개를 골라 각각 쇼츠 대본 —
+   [0~2초 훅] 스크롤을 멈추게 하는 첫 문장. 가격·숫자·반전 중 하나로 시작
+   [2~8초] 무엇인지 한 문장으로. 화면에 띄울 자막 문구 표기
+   [8~40초] 핵심 포인트 2~3개. 각각 한 문장 + 그때 보여줄 화면 지시
+   [마지막 5초] 행동 유도 1문장 (저장·댓글·프로필 링크 중 하나)
+   대본마다 200~350자. 말이 빨라도 읽히게 문장은 짧게
+   각 대본에 [화면] 지시를 괄호로 함께 적을 것
+5. 화면 자막 문구 3안 (10자 이내) — 훅으로 쓸 수 있게
+6. 이 소재로 만들 수 있는 후속 쇼츠 5개 목록 (제목만)`
+  }
+};
+function buildScriptPrompt(){
+  const list=boardList();
+  const spec=SCRIPT_SPEC[P().format]||SCRIPT_SPEC.long;
+  return `${AI_HEAD}
+
+주제: ${P().name}
+아래는 운영자가 직접 골라 저장한 벤치마크 레퍼런스 ${list.length}개입니다. 메모와 태그는 운영자 본인의 판단입니다.
+
+${boardRows().join('\n')}
+
+이 레퍼런스 전체를 근거로 다음을 만드세요. 목표 포맷은 ${spec.goal}입니다.
+
+1. 공통 패턴 3줄 — 이 레퍼런스들이 클릭된 공통 장치(정보격차·숫자·비교·역발상·공포/욕망 중 무엇)
+2. 내 채널용 주제 5개 — 각 주제마다 ①참고한 레퍼런스 번호 ②왜 지금 통하는지 1줄 ③운영자의 경험·데이터로 뒷받침 가능한 근거
+3. 주제별 제목 3안 — 원본 복제 금지, 구조만 이식. 30자 이내. 숫자 1개 이상 포함
+${spec.body}
 
 ${AI_RULES}`;
 }
@@ -2878,6 +3296,87 @@ function exportCSV(){
 /* ══════════════════════════════════════════════════════════════════
    가이드 · 탭 · 초기화
    ══════════════════════════════════════════════════════════════════ */
+/* ───────── 프로필 설정 ───────── */
+function openProfileEdit(){
+  openModal('주제 프로필 설정',`
+    <p class="lead">프로필마다 <b>워치리스트·큐·차단 목록·스캔 결과·벤치마크</b>가 따로 저장됩니다. 후보 풀만 공유합니다.
+    형태를 <span class="mono">쇼츠</span>로 두면 잦은 업로드와 짧은 길이를 <b>양산형 신호로 보지 않습니다</b> — 쇼핑 쇼츠처럼 그게 정상인 주제를 위한 설정입니다.</p>
+    <div id="pfList" style="margin-top:16px"></div>
+    <div class="row" style="margin-top:16px">
+      <button class="btn" onclick="addProfile()">+ 프로필 추가</button>
+      <button class="btn btn-ink" onclick="closeModal()">닫기</button>
+    </div>`);
+  renderProfileEdit();
+}
+function renderProfileEdit(){
+  const el=document.getElementById('pfList');if(!el)return;
+  el.innerHTML=Object.values(PROFILES).map(p=>{
+    const wl=(()=>{try{return Object.keys(JSON.parse(load('v4_watchlist__'+p.id)||'{}')).length;}catch(e){return 0;}})();
+    return `<div class="evbox" style="margin-bottom:12px">
+      <div class="row" style="margin-bottom:10px">
+        <input value="${esc(p.emoji)}" style="width:56px;text-align:center"
+          onchange="PROFILES['${p.id}'].emoji=this.value.slice(0,2);saveProfiles();renderProfileBar();renderProfileEdit()">
+        <input value="${esc(p.name)}" class="grow"
+          onchange="PROFILES['${p.id}'].name=this.value.trim()||'이름없음';saveProfiles();renderProfileBar();renderProfileEdit()">
+        <select onchange="PROFILES['${p.id}'].format=this.value;saveProfiles();if('${p.id}'===PID){applyPresetDefaults();Object.values(WL).forEach(scoreProfile);Object.values(QUEUE).forEach(scoreProfile);saveWL();saveQueue();renderWatch();renderQueue();applyFilters();}renderProfileBar();renderProfileEdit()">
+          <option value="long"${p.format==='long'?' selected':''}>롱폼 벤치마크</option>
+          <option value="short"${p.format==='short'?' selected':''}>쇼츠 벤치마크</option>
+        </select>
+        ${Object.keys(PROFILES).length>1?`<button class="btn btn-sm" onclick="deleteProfile('${p.id}')">삭제</button>`:''}
+      </div>
+      <div class="fg"><label class="fl">한 줄 설명</label>
+        <input value="${esc(p.desc||'')}"
+          onchange="PROFILES['${p.id}'].desc=this.value;saveProfiles();renderProfileBar()"></div>
+      <div class="kv" style="margin-top:10px"><span>워치리스트</span><b>${wl}채널</b></div>
+      <div class="kv"><span>주제 단어</span><b style="font-family:inherit;font-weight:500;font-size:11.5px">${esc((p.custom||'').slice(0,70))}${(p.custom||'').length>70?'…':''}</b></div>
+      <p class="hint">주제 단어는 ② 탭 맨 위에서 그 프로필로 전환한 뒤 수정하세요.</p>
+    </div>`;
+  }).join('');
+}
+function addProfile(){
+  const name=prompt('새 프로필 이름을 입력하세요. (예: 자기계발)');
+  if(!name)return;
+  let id='p'+Date.now().toString(36);
+  PROFILES[id]={id,name:name.trim(),emoji:'📌',format:'long',topic:'all',custom:'',seed:'life',desc:''};
+  saveProfiles();renderProfileBar();renderProfileEdit();
+  toast('프로필을 추가했습니다. 칩을 눌러 전환한 뒤 주제 단어를 넣으세요.');
+}
+function deleteProfile(id){
+  if(Object.keys(PROFILES).length<=1){toast('프로필은 최소 하나가 필요합니다.');return;}
+  const p=PROFILES[id];
+  if(!confirm(`「${p.name}」 프로필을 삭제합니다.\n이 프로필의 워치리스트·큐·차단 목록이 함께 지워집니다.\n후보 풀과 벤치마크 기록은 남습니다.`))return;
+  delete PROFILES[id];
+  ['v4_watchlist__','v4_queue__','v4_blocked__','v4_seedOff__','v4_lastScan__'].forEach(k=>del(k+id));
+  saveProfiles();
+  if(PID===id){PID=Object.keys(PROFILES)[0];store(ACTIVE_KEY,PID);switchProfile(PID);}
+  renderProfileBar();renderProfileEdit();
+  toast('삭제했습니다.');
+}
+
+/* 첫 실행 안내 — 한 번만 자동으로 뜬다. 이후에는 nav의 ? 버튼 → 맨 위 */
+function openIntro(){
+  const steps=[
+    ['0','내 주제를 정한다','② 후보 발굴 맨 위. 투자·머니 / 생활·자기계발 / 직접 입력 중 하나. 이걸 안 정하면 요리 채널과 투자 채널이 같은 점수를 받습니다.'],
+    ['1','볼 채널을 고른다','② 후보 발굴 → 「⚗ 재선별 시작」. v3에서 가져온 채널 3,353개를 2단계로 걸러 승격 큐에 올립니다. 큐에서 확인하고 「적합도 60 이상 일괄 승인」.'],
+    ['2','매일 전수 스캔','① 워치리스트 → 기간 7일 → 「▶ 전수 스캔」. 1,000채널이면 약 2,000유닛, 3~4분. 이게 매일 하는 유일한 작업입니다.'],
+    ['3','근거를 보고 담는다','③ 아웃라이어 → 🎬 롱폼 대박 → 카드 클릭해서 근거 확인 → 쓸 만하면 ♡. 점수는 등수일 뿐이니 실제 수치를 꼭 함께 보세요.'],
+    ['4','기획으로 바꾼다','④ 벤치마크에 5~10개 모이면 「📋 프롬프트 복사」 → Claude·GPT에 붙여넣기.']
+  ];
+  openModal('처음 오셨나요 — 5분이면 첫 결과가 나옵니다',
+    `<p class="lead" style="margin-bottom:14px">이 도구는 <b>구독자는 적은데 유독 잘된 영상</b>을 찾아 내 기획의 참고자료로 모으는 것이 전부입니다. 순서만 지키면 됩니다.</p>
+     <div class="evbox">${steps.map(([n,t,d])=>
+       `<div class="intro-step"><span class="n">${n}</span><div><b>${t}</b><p>${d}</p></div></div>`).join('')}</div>
+     <div class="howto"><div class="ht">먼저 알아둘 것 세 가지</div><ul>
+       <li><b>API 키가 있어야 합니다.</b> Google Cloud Console → YouTube Data API v3 사용 설정 → API 키. 무료이고, 하루 사용량 한도가 있습니다</li>
+       <li><b>쿼터는 두 종류</b>입니다. 일반 10,000(스캔·채널조회)과 검색 100(채굴). 스캔은 일반만 쓰므로 검색이 바닥나도 매일 돌릴 수 있습니다</li>
+       <li><b>브라우저를 닫으면 아무것도 추적하지 않습니다.</b> 서버에서 도는 수집기가 아니라 이 탭이 열려 있을 때만 동작합니다</li>
+     </ul></div>
+     <div class="row" style="margin-top:16px">
+       <button class="btn btn-arc" onclick="closeModal();switchTab('scout');">② 후보 발굴부터 시작</button>
+       <button class="btn" onclick="closeModal();openGuide();">자세한 가이드 보기</button>
+     </div>`);
+  store('v4_seen_intro','1');
+}
 function openGuide(){
   openModal('가이드',`
   <div class="evbox"><h5>v3에서 무엇이 바뀌었나</h5>
@@ -2898,8 +3397,9 @@ function openGuide(){
     </ol>
   </div>
   <div class="evbox" style="margin-top:14px"><h5>쿼터 감각</h5>
-    <div class="kv"><span>워치리스트 300채널 전수 스캔 (깊이 50)</span><b>약 600유닛</b></div>
-    <div class="kv"><span>채널 정보 갱신 300채널</span><b>약 6유닛</b></div>
+    <div class="kv"><span>워치리스트 1,000채널 전수 스캔 (깊이 50)</span><b>약 2,000유닛 · 3~4분</b></div>
+    <div class="kv"><span>워치리스트 300채널 전수 스캔</span><b>약 600유닛 · 1분</b></div>
+    <div class="kv"><span>채널 정보 갱신 1,000채널</span><b>약 20유닛</b></div>
     <div class="kv"><span>재선별 1단계 3,000채널</span><b>약 60유닛</b></div>
     <div class="kv"><span>재선별 2단계 500채널</span><b>약 1,000유닛</b></div>
     <div class="kv"><span>채굴 키워드 20개</span><b>검색 20회</b></div>
@@ -2966,6 +3466,7 @@ async function init(){
   document.documentElement.setAttribute('data-t',load('v4_theme')||'light');
   loadSettings();
   loadQuota();
+  loadProfiles();
   loadChannels();
   API_KEY=load('yt_api_key')||'';
   if(API_KEY){
@@ -2984,7 +3485,8 @@ async function init(){
 
   ['mineSrc','mineCount'].forEach(id=>document.getElementById(id).addEventListener('change',updMineCost));
   ['scanDepth'].forEach(id=>document.getElementById(id).addEventListener('change',updWlStats));
-  updMineCost();
+  loadTopic();updTopicNote();updMineCost();renderProfileBar();applyPresetDefaults();
+  const sd=document.getElementById('mineSrc');if(sd&&P().seed)sd.value=P().seed;
 
   await loadBoard();
   await loadSnapMeta();
@@ -3005,6 +3507,7 @@ async function init(){
   switchTab(wlArray().length<10&&!ALL.length?'scout':(tab||'out'));
   applyFilters();
   dbInfo();
+  if(load('v4_seen_intro')!=='1')setTimeout(openIntro,500);
   // 보관 정리는 화면이 뜬 뒤 유휴 시간에 돌린다
   const idle=window.requestIdleCallback||(f=>setTimeout(f,3000));
   idle(()=>runCleanup(false));
