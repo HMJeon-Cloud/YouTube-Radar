@@ -335,7 +335,7 @@ svg.chart{width:100%;display:block;overflow:visible}
 <div class="wrap">
 
 <nav class="nav">
-  <span class="logo"><i></i>아웃라이어 파인더<span class="ver">v4.3</span></span>
+  <span class="logo"><i></i>아웃라이어 파인더<span class="ver">v4.4</span></span>
   <div class="tabs">
     <button class="tab" id="tabWatch" onclick="switchTab('watch')">① 워치리스트 <span class="tabdot" id="dotWatch">0</span></button>
     <button class="tab" id="tabScout" onclick="switchTab('scout')">② 후보 발굴 <span class="tabdot" id="dotQueue">0</span></button>
@@ -683,9 +683,20 @@ svg.chart{width:100%;display:block;overflow:visible}
       <select id="minePeriod"><option value="30">30일</option><option value="90" selected>90일</option><option value="365">1년</option></select>
       <span class="fh">지금 활동 중인 채널만 원하면 30일. 쇼츠는 회전이 빨라 30일 권장</span>
     </div>
+    <div class="fg"><label class="fl">정밀 조사</label>
+      <select id="mineDeepCap">
+        <option value="200">상위 200채널 (약 400유닛)</option>
+        <option value="400" selected>상위 400채널 (약 800유닛)</option>
+        <option value="800">상위 800채널 (약 1,600유닛)</option>
+      </select>
+      <span class="fh">찾은 채널의 업로드 50개를 실제로 열어 재편집·주제·형태를 판정합니다. 이걸 건너뛰면 큐의 점수가 채널명만 본 추정치입니다</span>
+    </div>
     <div class="fg"><label class="fl">&nbsp;</label><button class="btn btn-ink" id="mineBtn" onclick="mine()">⛏ 채굴</button>
-      <span class="fh">1~2분</span></div>
+      <span class="fh">2~5분</span></div>
   </div>
+  <label class="hint" style="display:flex;gap:6px;align-items:center;cursor:pointer;margin-top:8px">
+    <input type="checkbox" id="mineDeep" checked> 찾은 채널을 큐에 올리기 전에 정밀 조사한다 (권장 · 끄면 검색 쿼터만 쓰고 일반 쿼터는 거의 안 씀)
+  </label>
   <input id="mineCustom" placeholder="쉼표 구분 예: 배당주, 재건축, 퇴직연금" style="margin-top:9px;width:100%;display:none">
   <div class="howto">
     <div class="ht">언제 쓰나</div>
@@ -857,7 +868,7 @@ svg.chart{width:100%;display:block;overflow:visible}
 <div class="toast" id="toast"></div>
 <script>
 /* ══════════════════════════════════════════════════════════════════
-   아웃라이어 파인더 v4.3 — 워치리스트 · 다중 프로필
+   아웃라이어 파인더 v4.4 — 워치리스트 · 다중 프로필
    단일 index.html · HTML/CSS/Vanilla JS · 빌드 없음 · GitHub Pages
 
    v3.2에서 확인된 구조적 한계와 이번 판의 대응
@@ -1406,7 +1417,7 @@ async function switchProfile(pid){
   }catch(e){}
   await loadBoard();
   renderProfileBar();renderWatch();renderQueue();renderBoard();
-  applyPresetDefaults();applyFilters();updTopicNote();updMineCost();updReScope();
+  applyPresetDefaults();updTopicNote();updMineCost();updReScope();
   toast(`${P().emoji} ${P().name} 프로필로 전환했습니다.`);
 }
 function renderProfileBar(){
@@ -2295,11 +2306,19 @@ async function runScan(){
     countHits();
     await dbPutMany('videos',ALL.slice(0,4000));
     store(pKey('v4_lastScan'),String(Date.now()));
+    const nShort=rows.filter(v=>v.format==='short').length, nLong=rows.filter(v=>v.format==='long').length;
     setProg('scanProg','scanStatus',
-      `완료 — ${targets.length}채널 전수 · 새 후보 ${rows.length.toLocaleString()}건 · 아웃라이어 배출 ${hitCh}채널 · 사용 쿼터 약 ${(targets.length*perCh).toLocaleString()}유닛`,100);
+      `완료 — ${targets.length}채널 전수 · 새 후보 ${rows.length.toLocaleString()}건 (쇼츠 ${nShort.toLocaleString()} · 롱폼 ${nLong.toLocaleString()}) · 아웃라이어 배출 ${hitCh}채널 · 사용 쿼터 약 ${(targets.length*perCh).toLocaleString()}유닛`,100);
     renderDiag('scanDiag');
     switchTab('out');applyFilters();
     if(!rows.length)showErr(`기간 ${days}일 안에 새 영상이 없습니다. 기간을 넓히거나 워치리스트에 활동 중인 채널을 더 넣으세요.`);
+    else if(!VIEW.length)toast(`${rows.length.toLocaleString()}건을 찾았지만 현재 필터에 전부 가려졌습니다. 화면의 사유를 확인하세요.`);
+    else{
+      /* 프로필 형태와 실제 들어온 형태가 어긋나면 워치리스트 구성이 잘못된 것이다 */
+      const want=isShorts()?nShort:nLong, other=isShorts()?nLong:nShort;
+      if(want<other*0.2&&rows.length>=20)
+        showErr(`이 프로필은 ${isShorts()?'쇼츠':'롱폼'} 기준인데 들어온 영상의 ${Math.round(other/rows.length*100)}%가 ${isShorts()?'롱폼':'쇼츠'}입니다. 워치리스트 채널들이 이 프로필 형태와 맞지 않을 수 있습니다 — ① 채널 관리에서 형태 비율을 확인하세요.`);
+    }
   }catch(e){
     setProg('scanProg','scanStatus','중단됨',100);
     showErr(e.message);renderDiag('scanDiag');
@@ -2521,6 +2540,29 @@ function renderBootstrap(){
            <li>부족하면 <b>2-B 채굴</b>로 보충</li>
          </ol></div>`}`;
 }
+/* 채굴·연결 확장으로 찾은 채널을 큐에 올리기 전에 업로드 50개를 실제로 본다.
+   v4.3까지는 이 단계가 재선별에만 있었다 — 채굴 채널은 재편집·주제·형태 비율이
+   전부 '미조사'인 채 적합도 60을 넘겨 승인됐다. 쇼핑 프로필은 채굴로만 채우므로
+   큐의 점수가 사실상 의미가 없었다. 채널당 2유닛. */
+async function deepenCandidates(list,progId,statusId,label){
+  const cap=Math.max(0,Math.min(list.length,Number(document.getElementById('mineDeepCap')?.value||400)));
+  const want=list.slice(0,cap);
+  if(!want.length)return 0;
+  const need=want.length*2;
+  if(quotaLeft('core')<need){
+    diagAdd(`정밀 조사 생략 — 일반 쿼터 ${quotaLeft('core')} < 필요 ${need}`,0,null);
+    return 0;
+  }
+  let done=0;
+  await inBatches(want,5,async p=>{
+    try{
+      const smp=await getUploads(p.id,p.up,50,false);
+      if(smp&&smp.length)deepenProfile(p,smp);
+    }catch(e){if(isQuotaErr(e)||e.fatal)throw e;diagAdd('정밀 조사 실패 · '+p.title,0,e);}
+    done++;
+  },(d,t)=>setProg(progId,statusId,`${label} 정밀 조사 ${d}/${t}채널 · 쿼터 ${Q.core.toLocaleString()}`,60+d/t*38));
+  return done;
+}
 async function mine(){
   hideErr();DIAG=[];
   if(!API_KEY){showErr('API 키를 먼저 저장해 주세요.');return;}
@@ -2565,16 +2607,28 @@ async function mine(){
     }
     setProg('mineProg','mineStatus',`채널 ${found.size}개 정보 조회 중…`,60);
     const items=await fetchChannels([...found.keys()]);
-    let queued=0;
+    const cands=[];
     items.forEach(c=>{
       const p=baseProfile(c);
       POOL[p.id]={title:p.title,subs:p.subs,vids:p.vids,up:p.up,seen:new Date().toISOString().slice(0,10),src:'mine',pid:PID};
       if(p.subs!=null&&p.subs>SET.preSubs)return;      // 워치 대상 밖은 풀에만
+      if(!p.up)return;
       scoreProfile(p);
+      cands.push(p);
+    });
+    savePool();
+    let deepened=0;
+    if(document.getElementById('mineDeep')?.checked!==false)
+      deepened=await deepenCandidates(cands,'mineProg','mineStatus','채굴');
+    let queued=0,blocked=0,off=0;
+    cands.forEach(p=>{
+      if(p.blocked)blocked++;
+      if(p.offTopic)off++;
       QUEUE[p.id]={...p,queuedAt:Date.now(),src:'채굴'};queued++;
     });
-    savePool();saveQueue();renderQueue();
-    setProg('mineProg','mineStatus',`완료 — 새 채널 ${found.size}개 발견 · 승격 큐에 ${queued}개 (검색 ${seeds.length}회 사용)`,100);
+    saveQueue();renderQueue();
+    setProg('mineProg','mineStatus',
+      `완료 — 새 채널 ${found.size}개 발견 · 승격 큐 ${queued}개 (정밀 조사 ${deepened} · 재편집 차단 ${blocked} · 주제 다름 ${off}) · 검색 ${seeds.length}회`,100);
     renderDiag('scanDiag');
     toast(`승격 큐에 ${queued}개를 올렸습니다. 승인해야 워치리스트에 들어갑니다.`);
   }catch(e){setProg('mineProg','mineStatus','중단됨',100);showErr(e.message);renderDiag('scanDiag');}
@@ -2668,16 +2722,21 @@ async function expandFeatured(){
     },(d,t)=>setProg(null,'expandStatus',`${d}/${t}채널 · 발견 ${found.size}`,null));
     if(!found.size){setProg(null,'expandStatus','추천 채널이 없습니다. 워치리스트 채널이 추천 채널을 공개하지 않을 수 있습니다.',null);return;}
     const items=await fetchChannels([...found].slice(0,400));
-    let queued=0;
+    const cands=[];
     items.forEach(c=>{
       const p=baseProfile(c);
       POOL[p.id]={title:p.title,subs:p.subs,vids:p.vids,up:p.up,seen:new Date().toISOString().slice(0,10),src:'expand',pid:PID};
       if(p.subs!=null&&p.subs>SET.preSubs)return;
       if(p.hangul<0.3)return;                        // v2.5에서 CNN·GMA 4,160만 유입을 막은 장치
-      scoreProfile(p);
-      QUEUE[p.id]={...p,queuedAt:Date.now(),src:'연결 확장'};queued++;
+      if(!p.up)return;
+      scoreProfile(p);cands.push(p);
     });
-    savePool();saveQueue();renderQueue();
+    savePool();
+    if(document.getElementById('mineDeep')?.checked!==false)
+      await deepenCandidates(cands,null,'expandStatus','연결 확장');
+    let queued=0;
+    cands.forEach(p=>{QUEUE[p.id]={...p,queuedAt:Date.now(),src:'연결 확장'};queued++;});
+    saveQueue();renderQueue();
     setProg(null,'expandStatus',`발견 ${found.size}채널 · 승격 큐 ${queued}개 (한글 채널명·구독자 상한 통과분)`,null);
     toast(`승격 큐에 ${queued}개를 올렸습니다.`);
   }catch(e){setProg(null,'expandStatus','중단됨',null);showErr(e.message);}
@@ -2707,26 +2766,37 @@ function applyPresetDefaults(){
   if(btn)btn.textContent=shorts?'🛒 쇼츠 대박':'🎬 롱폼 대박';
   const rk=document.getElementById('pRookie');
   if(rk)rk.textContent='🐣 신생 채널';
-  const sel=document.getElementById('fForm');
-  if(sel&&sel.options&&sel.options[0])sel.options[0].textContent=shorts?'≤3분 후보만':'롱폼만';
+  /* v4.3까지는 여기서 형태 select의 첫 옵션 '글자'만 바꿨다. 값은 'long'인 채로 남아
+     쇼츠 프로필에서 화면은 「≤3분 후보만」인데 실제 필터는 롱폼만 통과시켰다 —
+     쇼핑 프로필 스캔 결과가 전부 가려진 원인. 이제는 옵션을 손대지 않고
+     프리셋을 프로필에 맞춰 다시 적용한다 (preset()이 형태 값과 하한을 같이 세팅). */
+  preset(activePreset||'long');
 }
+/* 프리셋 하한 — 프로필 형태별.
+   쇼츠 「대박」 하한을 처음엔 10만으로 잡았는데, 구독 1만 이하 쇼핑 채널의 쇼츠가
+   7일 안에 10만을 넘는 건 드물어 사실상 아무것도 통과하지 못했다. 3만으로 내린다.
+   어차피 백분위 점수가 순위를 매기므로 이 게이트는 '명백히 작은 것'만 걸러내면 된다. */
+const PRESET_GATE={
+  long: {big:{views:50000,vps:2},rookie:{views:10000}},
+  short:{big:{views:30000,vps:3},rookie:{views:10000}}
+};
 function preset(k){
-  activePreset=k;
+  activePreset=k;store('v4_preset',k);
   ['All','Long','Rookie','Accel','Fresh','Cluster'].forEach(n=>{
     const el=document.getElementById('p'+n);
     if(el)el.classList.toggle('on',n.toLowerCase()===k);
   });
   setVal('fSubs','');setVal('fViews','');setVal('fVps','');setVal('fOut','');setVal('fScore','');
-  const shorts=isShorts(), main=shorts?'short':'long';
+  const shorts=isShorts(), main=shorts?'short':'long', gate=PRESET_GATE[main];
   const form=document.getElementById('fForm');
   if(k==='all'){form.value='all';}
   else if(k==='long'){
     form.value=main;
     setVal('fSubs',SET.preSubs);
-    setVal('fViews',shorts?100000:50000);   // 쇼츠는 조회수 체급이 다르다
-    setVal('fVps',shorts?3:2);
+    setVal('fViews',gate.big.views);
+    setVal('fVps',gate.big.vps);
   }
-  else if(k==='rookie'){form.value=main;setVal('fViews',shorts?30000:10000);}
+  else if(k==='rookie'){form.value=main;setVal('fViews',gate.rookie.views);}
   else{form.value='all';}
   applyFilters();
 }
@@ -2891,11 +2961,26 @@ function renderOut(){
     return;
   }
   if(!VIEW.length){
+    /* 0건이면 "왜"를 바로 보여준다. 제외 사유 버튼을 눌러야만 알 수 있으면
+       사용자는 "아무것도 안 나온다"고만 느낀다. 사유별 건수 + 한 번에 푸는 버튼. */
+    const cnt={};
+    // "조회수 4만 < 하한 5만" 류는 숫자를 떼어 한 묶음으로 센다. 나머지 사유는 원문 그대로.
+    EXCLUDED.forEach(x=>x.why.forEach(w=>{const k=w.replace(/\s[×\d.,]+[만억]?\s*[<>].*$/,'').trim();cnt[k]=(cnt[k]||0)+1;}));
+    const top=Object.entries(cnt).sort((a,b)=>b[1]-a[1]).slice(0,4);
+    const fmtCnt={long:ALL.filter(v=>v.format==='long').length,short:ALL.filter(v=>v.format==='short').length};
+    const main=isShorts()?'short':'long';
+    const formMismatch=document.getElementById('fForm').value!=='all'&&document.getElementById('fForm').value!==main;
     el.innerHTML=`<div class="empty"><div class="ic">🫥</div><b>조건을 통과한 영상이 0건입니다</b>
-      <p>로드된 ${ALL.length.toLocaleString()}건 중 ${EXCLUDED.length.toLocaleString()}건이 현재 필터에 걸렸습니다.
-      후보가 없는 것과 조건 때문에 가려진 것은 다릅니다 — 무엇에 걸렸는지 확인하세요.</p>
+      <p>로드된 ${ALL.length.toLocaleString()}건(쇼츠 ${fmtCnt.short.toLocaleString()} · 롱폼 ${fmtCnt.long.toLocaleString()}) 중
+      ${EXCLUDED.length.toLocaleString()}건이 현재 필터에 걸렸습니다. 후보가 없는 것과 가려진 것은 다릅니다.</p>
+      <div class="evbox" style="max-width:420px;margin:14px auto 0;text-align:left">
+        <h5>무엇에 가장 많이 걸렸나</h5>
+        ${top.map(([k,n])=>`<div class="kv"><span>${esc(k)}</span><b>${n.toLocaleString()}건</b></div>`).join('')||'<p class="hint" style="margin:0">—</p>'}
+        ${formMismatch?`<p class="hint" style="color:var(--bad)">⚠ 형태 필터가 이 프로필(${main==='short'?'쇼츠':'롱폼'})과 어긋나 있습니다.</p>`:''}
+      </div>
       <div class="row" style="justify-content:center;margin-top:16px">
-        <button class="btn btn-ink" onclick="openExcluded()">제외 사유 보기</button>
+        ${formMismatch?`<button class="btn btn-arc" onclick="preset('long')">프로필 기본 프리셋으로</button>`:''}
+        <button class="btn btn-ink" onclick="openExcluded()">제외 사유 전체</button>
         <button class="btn" onclick="preset('all')">필터 모두 풀기</button></div></div>`;
     document.getElementById('moreBtn').style.display='none';
     return;
@@ -3563,6 +3648,7 @@ async function init(){
   const gm=load('gm_api_key');if(gm)document.getElementById('gmKey').value=gm;
   krOnly=load('v4_kr')!=='0';
   capOn=load('v4_cap')!=='0';
+  activePreset=load('v4_preset')||'long';
   viewStyle=load('v4_view')||'gal';
   document.getElementById('fKr').classList.toggle('on',krOnly);
   document.getElementById('fCap').classList.toggle('on',capOn);
