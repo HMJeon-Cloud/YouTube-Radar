@@ -335,7 +335,7 @@ svg.chart{width:100%;display:block;overflow:visible}
 <div class="wrap">
 
 <nav class="nav">
-  <span class="logo"><i></i>아웃라이어 파인더<span class="ver">v4.5</span></span>
+  <span class="logo"><i></i>아웃라이어 파인더<span class="ver">v4.6</span></span>
   <div class="tabs">
     <button class="tab" id="tabWatch" onclick="switchTab('watch')">① 워치리스트 <span class="tabdot" id="dotWatch">0</span></button>
     <button class="tab" id="tabScout" onclick="switchTab('scout')">② 후보 발굴 <span class="tabdot" id="dotQueue">0</span></button>
@@ -495,6 +495,14 @@ svg.chart{width:100%;display:block;overflow:visible}
   <div class="progress" id="scanProg"><i style="width:0"></i></div>
   <div class="statusline" id="scanStatus"></div>
   <div id="scanDiag" class="diag"></div>
+  <div class="secbox closed" id="scanLogBox" style="display:none">
+    <div class="sechead" onclick="this.parentNode.classList.toggle('closed')">📋 마지막 스캔 기록<span class="sp" id="scanLogSummary" style="margin-left:8px;font-weight:500;color:var(--slate)"></span><span class="chev">▼</span></div>
+    <div class="secbody"><div class="evbox" id="scanLogBody"></div></div>
+  </div>
+  <div class="row" style="margin-top:12px">
+    <button class="btn btn-sm" onclick="scanProbe()">🔎 스캔 진단 — 채널 1개만 실제로 조회 (약 2유닛)</button>
+    <span class="hint" style="margin:0">스캔이 이상하면 이걸 먼저. 한 채널의 업로드 목록을 그대로 가져와 무엇이 오는지 보여줍니다.</span>
+  </div>
 </section>
 
 <section class="card">
@@ -1196,7 +1204,7 @@ function scrollToEl(id){
   const el=document.getElementById(id);
   if(!el||el.style.display==='none')return;
   const top=el.getBoundingClientRect().top+window.scrollY-90;
-  window.scrollTo({top:Math.max(0,top),behavior:'smooth'});
+  try{window.scrollTo({top:Math.max(0,top),behavior:'smooth'});}catch(e){}
 }
 function setProg(barId,statusId,txt,pct){
   const p=document.getElementById(barId),s=document.getElementById(statusId);
@@ -1254,13 +1262,15 @@ function renderDiag(elId){
 function apiErrMsg(e){
   const r=e?.errors?.[0]?.reason||'';
   if(r==='quotaExceeded'||r==='dailyLimitExceeded')return 'API 할당량을 모두 사용했습니다. 미국 태평양시 자정에 초기화됩니다.';
+  if(r==='rateLimitExceeded'||r==='userRateLimitExceeded')return '순간 요청 속도 제한에 걸렸습니다 (하루 쿼터와 무관). 잠시 뒤 다시 시도하세요.';
   if(r==='keyInvalid')return 'API 키가 올바르지 않습니다.';
   if(r==='accessNotConfigured')return '이 프로젝트에서 YouTube Data API v3가 켜져 있지 않습니다.';
   if(r==='ipRefererBlocked'||r==='httpRefererBlocked')return 'API 키의 리퍼러 제한에 막혔습니다. 현재 주소를 허용 목록에 넣으세요.';
   if(r==='playlistNotFound')return '업로드 재생목록을 찾을 수 없습니다.';
   return (e?.message||'알 수 없는 오류')+(r?` (${r})`:'');
 }
-async function apiGet(path,params,bucket){
+let sleep=ms=>new Promise(r=>setTimeout(r,ms));
+async function apiGet(path,params,bucket,_retry=0){
   if(!API_KEY)throw new Error('API 키를 먼저 저장해 주세요.');
   checkQuota(bucket,1);
   const u=new URL('https://www.googleapis.com/youtube/v3/'+path);
@@ -1272,10 +1282,20 @@ async function apiGet(path,params,bucket){
   const j=await r.json().catch(()=>({error:{message:'응답을 해석하지 못했습니다.'}}));
   if(!r.ok&&!j.error)j.error={code:r.status,message:'HTTP '+r.status};
   if(j.error){
+    const reason=j.error.errors?.[0]?.reason||'';
+    /* 순간 속도 제한(rateLimitExceeded·userRateLimitExceeded·429·503)은 하루 쿼터 소진이 아니다.
+       v4.4까지는 이것도 '쿼터 오류'로 보고 스캔 전체를 중단했다 — 647채널 × 4회를 5개씩 동시에
+       쏘면 한 번쯤 걸리고, 그 한 번에 스캔이 통째로 죽었다. 잠깐 쉬고 3번까지 다시 시도한다. */
+    const transient=['rateLimitExceeded','userRateLimitExceeded','backendError','internalError'].includes(reason)||r.status===429||r.status===503;
+    if(transient&&_retry<3){
+      await sleep(1500*Math.pow(2,_retry));
+      return apiGet(path,params,bucket,_retry+1);
+    }
     const err=new Error(apiErrMsg(j.error));
     err.code=j.error.code;
-    err.reason=j.error.errors?.[0]?.reason||'';
-    err.quota=['quotaExceeded','dailyLimitExceeded','rateLimitExceeded'].includes(err.reason);
+    err.reason=reason;
+    err.transient=transient;
+    err.quota=['quotaExceeded','dailyLimitExceeded'].includes(err.reason);
     err.fatal=['keyInvalid','accessNotConfigured','ipRefererBlocked','httpRefererBlocked','dailyLimitExceeded','quotaExceeded'].includes(err.reason);
     throw err;
   }
@@ -1423,7 +1443,7 @@ async function switchProfile(pid){
   }catch(e){}
   await loadBoard();
   renderProfileBar();renderWatch();renderQueue();renderBoard();
-  applyPresetDefaults();updTopicNote();updMineCost();updReScope();
+  applyPresetDefaults();updTopicNote();updMineCost();updReScope();renderScanLog();
   toast(`${P().emoji} ${P().name} 프로필로 전환했습니다.`);
 }
 function renderProfileBar(){
@@ -2257,6 +2277,79 @@ function makeVideo(b,ch,source){
   };
 }
 
+/* ───────── 스캔 기록 ─────────
+   스캔이 어떻게 끝났는지를 프로필별로 남긴다. v4.4까지는 중단되면 '중단됨' 두 글자와
+   금방 사라지는 오류 상자뿐이라, 새로고침 뒤에는 "아직 스캔 안 함"과 구분이 안 됐다. */
+function saveScanLog(rec){try{store(pKey('v4_scanlog'),JSON.stringify(rec));}catch(e){}}
+function loadScanLog(){try{return JSON.parse(load(pKey('v4_scanlog'))||'null');}catch(e){return null;}}
+function scanLogHtml(log){
+  if(!log)return '';
+  const when=new Date(log.at).toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
+  const rows=[];
+  rows.push(`<div class="kv"><span>시각</span><b>${when} (${ageLabel((Date.now()-log.at)/3600000)})</b></div>`);
+  rows.push(`<div class="kv"><span>대상 채널</span><b>${log.targets} · 조회 성공 ${log.ok} · 실패 ${log.fail}</b></div>`);
+  rows.push(`<div class="kv"><span>기간 · 깊이</span><b>${log.days}일 · ${log.depth}개</b></div>`);
+  rows.push(`<div class="kv"><span>후보</span><b>${(log.rows||0).toLocaleString()}건 (쇼츠 ${log.nShort||0} · 롱폼 ${log.nLong||0})</b></div>`);
+  if(log.newest)rows.push(`<div class="kv"><span>샘플 중 가장 최근 업로드</span><b>${ageLabel((Date.now()-log.newest)/3600000)}</b></div>`);
+  rows.push(`<div class="kv"><span>쿼터 사용</span><b>약 ${(log.quota||0).toLocaleString()}유닛 · ${Math.round((log.ms||0)/1000)}초</b></div>`);
+  if(log.error)rows.push(`<div class="kv"><span style="color:var(--bad)">중단 사유</span><b style="color:var(--bad);font-family:inherit;font-weight:550;text-align:right">${esc(log.error)}</b></div>`);
+  if(log.firstErr&&log.fail)rows.push(`<div class="kv"><span>실패 예시</span><b style="font-family:inherit;font-weight:500;text-align:right">${esc(log.firstErr)}</b></div>`);
+  return rows.join('');
+}
+function renderScanLog(){
+  const box=document.getElementById('scanLogBox'),body=document.getElementById('scanLogBody'),sum=document.getElementById('scanLogSummary');
+  if(!box)return;
+  const log=loadScanLog();
+  if(!log){box.style.display='none';return;}
+  box.style.display='block';
+  body.innerHTML=scanLogHtml(log);
+  sum.textContent=log.error?`⛔ 중단 · ${log.ok+log.fail}/${log.targets}채널 · ${ageLabel((Date.now()-log.at)/3600000)}`
+    :`${log.rows.toLocaleString()}건 · 성공 ${log.ok}/${log.targets} · ${ageLabel((Date.now()-log.at)/3600000)}`;
+  if(log.error)box.classList.remove('closed');
+}
+/* 한 채널만 실제로 조회해서 무엇이 오는지 그대로 보여준다.
+   "왜 안 나오지"를 API 응답 수준에서 확인하는 가장 싼 방법이다 (약 2유닛). */
+async function scanProbe(){
+  hideErr();
+  if(!API_KEY){showErr('API 키를 먼저 저장해 주세요.');return;}
+  const targets=scanTargets();
+  if(!targets.length){showErr('스캔 대상 채널이 없습니다.');return;}
+  const ch=targets[0];
+  const days=Number(document.getElementById('scanRange').value||7);
+  const cutoff=Date.now()-days*86400000;
+  openModal('🔎 스캔 진단 — '+ch.title,'<p class="hint">조회 중… (약 2유닛)</p>');
+  try{
+    const t0=Date.now();
+    const sample=await getUploads(ch.id,ch.up,50,true);
+    const ms=Date.now()-t0;
+    if(!sample||!sample.length){
+      document.getElementById('modalBody').innerHTML=`<div class="verdict">업로드 목록이 <b>비어 있습니다.</b> 채널 ID <span class="mono">${esc(ch.id)}</span> · 재생목록 <span class="mono">${esc(ch.up||'(없음)')}</span>. 채널이 비공개이거나 재생목록 ID가 잘못됐을 수 있습니다.</div>`;
+      return;
+    }
+    const inWin=sample.filter(b=>Date.parse(b.publishedAt)>=cutoff);
+    const shorts=sample.filter(b=>formatOf(b.dur)==='short').length;
+    const newest=Math.max(...sample.map(b=>Date.parse(b.publishedAt)||0));
+    const rowsHtml=sample.slice(0,12).map(b=>`<div class="baserow"><img src="${esc(b.thumb)}" loading="lazy" alt="">
+      <span class="bt">${esc(b.title)} <span class="muted">· ${durLabel(b.dur)} · ${ageLabel((Date.now()-Date.parse(b.publishedAt))/3600000)}${b.live!=='none'?' · '+esc(b.live):''}</span></span>
+      <span class="bv">${fmt(b.views)}</span></div>`).join('');
+    document.getElementById('modalBody').innerHTML=`
+      <div class="evbox"><h5>응답 요약 · ${ms}ms</h5>
+        <div class="kv"><span>채널</span><b style="font-family:inherit">${esc(ch.title)}</b></div>
+        <div class="kv"><span>가져온 영상</span><b>${sample.length}개</b></div>
+        <div class="kv"><span>그중 ≤3분</span><b>${shorts}개 (${Math.round(shorts/sample.length*100)}%)</b></div>
+        <div class="kv"><span>가장 최근 업로드</span><b>${ageLabel((Date.now()-newest)/3600000)}</b></div>
+        <div class="kv"><span>현재 기간(${days}일) 안</span><b style="color:${inWin.length?'var(--ok)':'var(--bad)'}">${inWin.length}개</b></div>
+        <div class="kv"><span>라이브·예정 제외 후</span><b>${inWin.filter(b=>b.live==='none'&&b.dur>0).length}개</b></div>
+      </div>
+      <div class="verdict">${inWin.length
+        ? `이 채널은 정상적으로 후보를 냅니다. 전수 스캔이 0건이면 <b>다른 채널들의 조회 실패</b>이거나 <b>스캔이 중단</b>된 것입니다 — ① 「마지막 스캔 기록」의 사유를 보세요.`
+        : `이 채널은 최근 ${days}일 안에 업로드가 없어 후보가 나오지 않습니다. 워치리스트 다수가 이렇다면 <b>기간을 30일</b>로 넓히세요.`}</div>
+      <div class="evbox" style="margin-top:14px"><h5>최근 12개</h5>${rowsHtml}</div>`;
+  }catch(e){
+    document.getElementById('modalBody').innerHTML=`<div class="verdict" style="border-color:var(--bad)"><b>조회 실패:</b> ${esc(e.message)}
+      <div class="hint">reason: <span class="mono">${esc(e.reason||'—')}</span> · HTTP ${esc(String(e.code||'—'))}. 리퍼러·API 제한이면 Google Cloud Console에서 이 주소를 허용 목록에 넣으세요. 속도 제한이면 잠시 뒤 다시.</div></div>`;
+  }
+}
 /* ───────── 전수 스캔 ───────── */
 let scanning=false;
 async function runScan(){
@@ -2291,16 +2384,29 @@ async function runScan(){
   scanning=true;
   const btn=document.getElementById('scanBtn');btn.disabled=true;btn.textContent='스캔 중…';
   const cutoff=Date.now()-days*86400000;
-  const rows=[];let hitCh=0,truncated=0;
+  const rows=[];let hitCh=0,truncated=0,okCh=0,failCh=0,firstErr='',newest=0;
+  const t0=Date.now(),q0=Q.core;
+  const log={at:t0,days,depth,targets:targets.length,ok:0,fail:0,rows:0,nShort:0,nLong:0,newest:0,quota:0,ms:0,error:'',firstErr:''};
+  const finishLog=err=>{
+    log.ok=okCh;log.fail=failCh;log.rows=rows.length;
+    log.nShort=rows.filter(v=>v.format==='short').length;log.nLong=rows.filter(v=>v.format==='long').length;
+    log.newest=newest;log.quota=Q.core-q0;log.ms=Date.now()-t0;log.error=err?String(err.message||err):'';log.firstErr=firstErr;
+    saveScanLog(log);
+  };
   try{
-    await inBatches(targets,5,async ch=>{
+    /* 동시 5 → 3. 채굴 정밀조사(800회)는 5로도 괜찮았지만 스캔은 2,000회 이상이라 순간 속도 제한에 닿는다 */
+    await inBatches(targets,3,async ch=>{
       let sample;
       try{sample=await getUploads(ch.id,ch.up,depth,force);}
       catch(e){
         if(isQuotaErr(e)||e.fatal)throw e;
+        failCh++;if(!firstErr)firstErr=e.message||String(e);
         diagAdd('채널 조회 실패 · '+ch.title,0,e);return;
       }
-      if(!sample||!sample.length)return;
+      if(!sample||!sample.length){failCh++;if(!firstErr)firstErr='업로드 목록이 비어 있음';return;}
+      okCh++;
+      const nw=Math.max(...sample.map(b=>Date.parse(b.publishedAt)||0));
+      if(nw>newest)newest=nw;
       // 스캔하며 얻은 샘플로 채널 프로파일도 함께 갱신한다 (추가 쿼터 없음)
       deepenProfile(ch,sample);
       ch.lastScanAt=Date.now();
@@ -2333,12 +2439,14 @@ async function runScan(){
     countHits();
     await dbPutMany('videos',ALL.slice(0,4000));
     store(pKey('v4_lastScan'),String(Date.now()));
-    const nShort=rows.filter(v=>v.format==='short').length, nLong=rows.filter(v=>v.format==='long').length;
+    finishLog(null);
+    const nShort=log.nShort, nLong=log.nLong;
     setProg('scanProg','scanStatus',
-      `완료 — ${targets.length}채널 전수 · 새 후보 ${rows.length.toLocaleString()}건 (쇼츠 ${nShort.toLocaleString()} · 롱폼 ${nLong.toLocaleString()}) · 아웃라이어 배출 ${hitCh}채널 · 사용 쿼터 약 ${(targets.length*perCh).toLocaleString()}유닛`,100);
+      `완료 — ${targets.length}채널 중 조회 성공 ${okCh} · 실패 ${failCh} · 새 후보 ${rows.length.toLocaleString()}건 (쇼츠 ${nShort.toLocaleString()} · 롱폼 ${nLong.toLocaleString()}) · 아웃라이어 배출 ${hitCh}채널 · 사용 쿼터 약 ${log.quota.toLocaleString()}유닛 · ${Math.round(log.ms/1000)}초`,100);
     renderDiag('scanDiag');
     switchTab('out');applyFilters();
-    if(!rows.length)showErr(`기간 ${days}일 안에 새 영상이 없습니다. 기간을 넓히거나 워치리스트에 활동 중인 채널을 더 넣으세요.`);
+    if(failCh>okCh)showErr(`채널 조회가 대부분 실패했습니다 (성공 ${okCh} · 실패 ${failCh}). 첫 오류: ${firstErr||'—'}. ① 「🔎 스캔 진단」으로 한 채널만 조회해 원인을 확인하세요.`);
+    else if(!rows.length)showErr(`${okCh}채널을 조회했지만 기간 ${days}일 안에 새 영상이 0건입니다${newest?` — 샘플 중 가장 최근 업로드가 ${ageLabel((Date.now()-newest)/3600000)}입니다`:''}. 기간을 넓히거나 워치리스트에 활동 중인 채널을 더 넣으세요.`);
     else if(!VIEW.length)toast(`${rows.length.toLocaleString()}건을 찾았지만 현재 필터에 전부 가려졌습니다. 화면의 사유를 확인하세요.`);
     else{
       /* 프로필 형태와 실제 들어온 형태가 어긋나면 워치리스트 구성이 잘못된 것이다 */
@@ -2347,12 +2455,22 @@ async function runScan(){
         showErr(`이 프로필은 ${isShorts()?'쇼츠':'롱폼'} 기준인데 들어온 영상의 ${Math.round(other/rows.length*100)}%가 ${isShorts()?'롱폼':'쇼츠'}입니다. 워치리스트 채널들이 이 프로필 형태와 맞지 않을 수 있습니다 — ① 채널 관리에서 형태 비율을 확인하세요.`);
     }
   }catch(e){
-    setProg('scanProg','scanStatus','중단됨',100);
-    showErr(e.message);renderDiag('scanDiag');
-    if(rows.length){rankPool(rows);ALL=rows;applyFilters();}
+    finishLog(e);
+    setProg('scanProg','scanStatus',`중단 — ${okCh+failCh}/${targets.length}채널까지 처리 · 부분 결과 ${rows.length.toLocaleString()}건 · 사유: ${e.message}`,100);
+    showErr(`스캔이 중단됐습니다 (${okCh+failCh}/${targets.length}채널). 사유: ${e.message}${rows.length?` — 그때까지의 ${rows.length.toLocaleString()}건은 저장했습니다.`:''}`);
+    renderDiag('scanDiag');
+    /* 부분 결과도 버리지 않는다. v4.4는 메모리에만 두어 새로고침·프로필 전환 뒤 사라졌다 */
+    if(rows.length){
+      const map=new Map(ALL.map(v=>[v.id,v]));
+      rows.forEach(v=>{const prev=map.get(v.id);map.set(v.id,prev?{...prev,...v,discoveredAt:prev.discoveredAt,cluster:0}:v);});
+      ALL=[...map.values()];
+      try{await loadSnapMeta();ALL.forEach(applySnapMetrics);rankPool(ALL);CLUSTERS=buildClusters(ALL);countHits();
+        await dbPutMany('videos',ALL.slice(0,4000));store(pKey('v4_lastScan'),String(Date.now()));}catch(_){}
+      switchTab('out');applyFilters();
+    }
   }finally{
     scanning=false;btn.disabled=false;btn.textContent='▶ 워치리스트 전수 스캔';
-    updWlStats();dbInfo();
+    updWlStats();dbInfo();renderScanLog();
   }
 }
 /* 채널별 아웃라이어 배출 이력 — 워치리스트 적합도에 반영된다 */
@@ -2989,8 +3107,23 @@ function tableRow(v){
 function renderOut(){
   const el=document.getElementById('outBody');if(!el)return;
   if(!ALL.length){
-    el.innerHTML=`<div class="empty"><div class="ic">🔭</div><b>아직 스캔 결과가 없습니다</b>
-      <p>① 워치리스트에 채널을 올리고 <b>전수 스캔</b>을 돌리세요. 채널 1,000개면 약 2,000유닛, 하루 쿼터의 20%입니다.</p>
+    const log=loadScanLog();
+    let head,body;
+    if(!log){
+      head='아직 스캔 결과가 없습니다';
+      body=`<p>① 워치리스트에 채널을 올리고 <b>전수 스캔</b>을 돌리세요. 채널 1,000개면 약 2,000유닛, 하루 쿼터의 20%입니다.</p>`;
+    }else if(log.error){
+      head='마지막 스캔이 중단됐습니다';
+      body=`<p>결과가 "없는" 게 아니라 스캔이 끝까지 가지 못했습니다. 아래 기록의 사유를 보고 ①에서 다시 돌리세요. 순간 속도 제한이었다면 그냥 다시 누르면 됩니다.</p>`;
+    }else if(log.fail>log.ok){
+      head='마지막 스캔에서 채널 조회가 대부분 실패했습니다';
+      body=`<p>${log.targets}채널 중 ${log.fail}개가 실패했습니다. API 키 제한(리퍼러·API 종류)이나 채널 데이터 문제일 수 있습니다. ① 「🔎 스캔 진단」으로 한 채널만 조회해 오류 원문을 확인하세요.</p>`;
+    }else{
+      head=`마지막 스캔에서 기간 ${log.days}일 안 영상이 0건이었습니다`;
+      body=`<p>${log.ok}채널을 정상 조회했지만 그 기간에 올라온 영상이 없었습니다${log.newest?` — 샘플 중 가장 최근 업로드가 <b>${ageLabel((Date.now()-log.newest)/3600000)}</b>입니다`:''}. 기간을 넓히거나 활동 중인 채널을 더 넣으세요.</p>`;
+    }
+    el.innerHTML=`<div class="empty"><div class="ic">${log?.error?'⛔':'🔭'}</div><b>${head}</b>${body}
+      ${log?`<div class="evbox" style="max-width:520px;margin:14px auto 0;text-align:left"><h5>마지막 스캔 기록 · ${esc(P().name)}</h5>${scanLogHtml(log)}</div>`:''}
       <div class="row" style="justify-content:center;margin-top:16px">
         <button class="btn btn-arc" onclick="switchTab('watch')">① 워치리스트로</button>
         <button class="btn" onclick="switchTab('scout')">② 채널 발굴하기</button></div></div>`;
@@ -3648,7 +3781,7 @@ function switchTab(t){
   else if(t==='scout'){renderQueue();savePool();}
   else if(t==='board')renderBoard();
   renderSteps();
-  window.scrollTo({top:0,behavior:'smooth'});
+  try{window.scrollTo({top:0,behavior:'smooth'});}catch(e){}
 }
 /* 이전 스캔 결과를 페이지 단위로 더 불러온다 — 시작할 때 전량 로드하지 않기 때문 */
 async function loadOlder(){
@@ -3695,7 +3828,7 @@ async function init(){
 
   ['mineSrc','mineCount'].forEach(id=>document.getElementById(id).addEventListener('change',updMineCost));
   ['scanDepth'].forEach(id=>document.getElementById(id).addEventListener('change',updWlStats));
-  loadTopic();updTopicNote();updMineCost();renderProfileBar();applyPresetDefaults();updReScope();
+  loadTopic();updTopicNote();updMineCost();renderProfileBar();applyPresetDefaults();updReScope();renderScanLog();
   const sd=document.getElementById('mineSrc');if(sd&&P().seed)sd.value=P().seed;
 
   await loadBoard();
