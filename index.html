@@ -335,7 +335,7 @@ svg.chart{width:100%;display:block;overflow:visible}
 <div class="wrap">
 
 <nav class="nav">
-  <span class="logo"><i></i>아웃라이어 파인더<span class="ver">v4.4</span></span>
+  <span class="logo"><i></i>아웃라이어 파인더<span class="ver">v4.5</span></span>
   <div class="tabs">
     <button class="tab" id="tabWatch" onclick="switchTab('watch')">① 워치리스트 <span class="tabdot" id="dotWatch">0</span></button>
     <button class="tab" id="tabScout" onclick="switchTab('scout')">② 후보 발굴 <span class="tabdot" id="dotQueue">0</span></button>
@@ -529,6 +529,7 @@ svg.chart{width:100%;display:block;overflow:visible}
 
 <!-- ══════════ ② SCOUT ══════════ -->
 <div class="panel" id="panelScout">
+<section class="card" id="bootstrapBox" style="display:none;border-color:var(--arc);box-shadow:0 0 0 3px color-mix(in srgb,var(--arc) 18%,transparent)"></section>
 
 <section class="card" style="border-color:var(--arc)">
   <div class="eyebrow">0 · 이 프로필의 주제<span class="sp" id="topicScope"></span></div>
@@ -557,8 +558,6 @@ svg.chart{width:100%;display:block;overflow:visible}
     <p>워치리스트 · 승격 큐 · 차단 목록 · 스캔 결과 · 벤치마크가 <b>프로필별로 완전히 분리</b>됩니다. 후보 풀(원본 채널 목록)만 공유합니다. 위쪽 프로필 칩으로 전환하면 화면 전체가 그 주제 것으로 바뀝니다.</p>
   </div>
 </section>
-
-<section class="card" id="bootstrapBox" style="display:none;border-color:var(--arc)"></section>
 
 <section class="card">
   <div class="eyebrow">1 · 승격 큐<span class="sp">승인한 채널만 워치리스트에 들어갑니다</span></div>
@@ -590,7 +589,7 @@ svg.chart{width:100%;display:block;overflow:visible}
   <div class="row" style="margin-top:14px;justify-content:center"><button class="btn" id="qMore" onclick="qLimit+=60;renderQueue()" style="display:none">더 보기</button></div>
 </section>
 
-<section class="card">
+<section class="card" id="reCard">
   <div class="eyebrow">2-A · 기존 채널 재선별<span class="sp" id="poolNote"></span></div>
   <h2 class="sec">v3에서 쌓은 채널을 다시 거른다</h2>
   <p class="lead">v3의 채널 3,353개를 <b>후보 풀</b>로 읽어 왔습니다. 삭제하지 않고 보관만 하며, 2단계로 걸러 워치리스트를 다시 뽑습니다. <b>처음이라면 여기부터 하세요</b> — 채굴보다 싸고 정확합니다.</p>
@@ -642,7 +641,7 @@ svg.chart{width:100%;display:block;overflow:visible}
   <div class="statusline" id="reStatus"></div>
 </section>
 
-<section class="card">
+<section class="card" id="mineCard">
   <div class="eyebrow">2-B · 채굴 — 검색으로 새 채널 찾기<span class="sp">검색 버킷 사용 · 하루 100회</span></div>
   <h2 class="sec">후보 풀에 없는 채널을 데려온다</h2>
   <p class="lead"><b>여기 키워드는 실제로 유튜브를 검색합니다</b> (위 「내 주제」와 다릅니다 — 그건 판정용 사전이고 이건 검색어). 키워드 1개 = 검색 1회이고 하루 100회가 전부이므로 아껴 쓰세요. 재선별을 다 돌린 뒤에 하는 게 순서입니다.</p>
@@ -736,6 +735,7 @@ svg.chart{width:100%;display:block;overflow:visible}
         <button class="btn" onclick="exportPool()">⬇ 후보 풀 CSV</button>
         <button class="btn" onclick="document.getElementById('impPool').click()">⬆ 채널 목록 가져오기 (JSON)</button>
         <input type="file" id="impPool" accept=".json" style="display:none" onchange="importPool(this)">
+        <button class="btn" onclick="reimportV3()">↺ v3 채널 다시 가져오기</button>
         <button class="btn" onclick="clearPool()">후보 풀 비우기</button>
       </div>
       <p class="hint">v3의 채널 백업 JSON을 그대로 가져올 수 있습니다. 워치리스트에는 자동 등록되지 않고 후보 풀로만 들어갑니다.</p>
@@ -1192,6 +1192,12 @@ function toast(m){
   t.textContent=m;t.classList.add('show');
   clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2800);
 }
+function scrollToEl(id){
+  const el=document.getElementById(id);
+  if(!el||el.style.display==='none')return;
+  const top=el.getBoundingClientRect().top+window.scrollY-90;
+  window.scrollTo({top:Math.max(0,top),behavior:'smooth'});
+}
 function setProg(barId,statusId,txt,pct){
   const p=document.getElementById(barId),s=document.getElementById(statusId);
   if(p){p.classList.toggle('on',pct!=null&&pct<100);const i=p.querySelector('i');if(i)i.style.width=(pct||0)+'%';}
@@ -1432,11 +1438,14 @@ function renderProfileBar(){
 }
 /* v3의 ch_universe를 후보 풀로 옮긴다. 워치리스트에는 자동 등록하지 않는다 —
    3,353채널을 그대로 승계하면 v3.2의 쿼터 문제가 그대로 재현된다. */
-function migrateV3(){
-  if(load('v4_migrated')==='1')return;
+function migrateV3(force){
+  /* 플래그가 서 있어도 풀이 비어 있고 v3 데이터가 남아 있으면 다시 가져온다 —
+     저장 실패·초기화 등으로 풀만 사라진 경우를 구제한다 */
   let old={};
   try{old=JSON.parse(load('ch_universe')||'{}')||{};}catch(e){}
   const ids=Object.keys(old);
+  const poolEmpty=Object.keys(POOL).length===0;
+  if(!force&&load('v4_migrated')==='1'&&!(poolEmpty&&ids.length))return;
   if(ids.length){
     ids.forEach(id=>{
       if(POOL[id])return;
@@ -1964,6 +1973,11 @@ function updWlStats(){
   const list=wlArray(), targets=scanTargets();
   const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
   set('wlCount',list.length);set('wlCap','/ '+SET.watchCap);
+  const sb=document.getElementById('scanBtn');
+  if(sb&&!scanning){
+    if(!targets.length){sb.textContent=list.length?'⚠ 스캔 대상 0개 — 채널 상태 확인':'⚠ 채널 0개 — ②에서 먼저 채우기';sb.classList.remove('btn-arc');sb.classList.add('btn');}
+    else{sb.textContent=`▶ ${targets.length}채널 전수 스캔`;sb.classList.add('btn-arc');}
+  }
   set('dotWatch',list.length);
   set('wlDormant',list.filter(p=>p.dormant).length);
   // playlistItems 페이지 수 + videos 상세 배치 수 = 채널당 ceil(깊이/50) × 2
@@ -2060,6 +2074,14 @@ function importAll(inp){
     }catch(e){showErr('파일을 읽지 못했습니다: '+e.message);}
   };
   r.readAsText(f);inp.value='';
+}
+function reimportV3(){
+  let n=0;
+  try{n=Object.keys(JSON.parse(load('ch_universe')||'{}')||{}).length;}catch(e){}
+  if(!n){showErr('이 브라우저·주소에는 v3 채널 데이터(ch_universe)가 없습니다. v3를 쓰던 것과 같은 주소로 열거나, v3에서 받은 백업 JSON을 「채널 목록 가져오기」로 넣으세요.');return;}
+  migrateV3(true);
+  toast(`v3 채널 ${n.toLocaleString()}개를 후보 풀로 다시 가져왔습니다.`);
+  updReScope();
 }
 function exportPool(){
   const rows=[['channelId','채널명','구독자','영상수','uploadsPlaylist','출처']];
@@ -2243,8 +2265,13 @@ async function runScan(){
   if(!API_KEY){showErr('API 키를 먼저 저장해 주세요.');switchTab('watch');return;}
   const targets=scanTargets();
   if(!targets.length){
-    showErr('스캔할 채널이 없습니다. ② 후보 발굴에서 채널을 워치리스트에 올리세요.');
-    switchTab('scout');return;
+    const n=wlArray().length;
+    showErr(n===0
+      ? `${P().emoji} ${P().name} 프로필의 워치리스트가 비어 있습니다 (0채널). 스캔은 이미 고른 채널의 영상을 보는 단계라 먼저 채널을 채워야 합니다 — ② 후보 발굴 맨 위 「시작 지점」의 순서대로 하세요.`
+      : `워치리스트 ${n}채널이 전부 휴면·일시정지·재생목록 없음 상태라 스캔 대상이 0개입니다. ① 채널 관리에서 확인하세요.`);
+    switchTab('scout');
+    setTimeout(()=>scrollToEl('bootstrapBox'),150);
+    return;
   }
   const depth=Number(document.getElementById('scanDepth').value||50);
   const force=document.getElementById('scanFresh').value==='1';
@@ -2519,11 +2546,19 @@ function renderBootstrap(){
   /* 이 프로필로 모은 채널이 없고, 풀이 다른 주제 것뿐이면 채굴이 먼저다 */
   const minePath=mine.length<50&&(shorts||all.length<200);
   box.style.display='block';
+  const wl=wlArray().length, q=Object.keys(QUEUE).length;
   box.innerHTML=`<div class="eyebrow">시작 지점<span class="sp">${P().emoji} ${esc(P().name)} 프로필</span></div>
-    <h2 class="sec">이 프로필은 아직 비어 있습니다</h2>
+    <h2 class="sec">이 프로필은 아직 비어 있습니다 — 스캔할 채널이 없습니다</h2>
+    <div class="strip" style="margin-top:10px">
+      <div class="stat"><span class="k">워치리스트</span><span class="v ${wl?'':'em'}">${wl}</span><span class="sub">스캔 대상</span></div>
+      <div class="stat"><span class="k">승격 큐</span><span class="v">${q}</span><span class="sub">승인 대기</span></div>
+      <div class="stat"><span class="k">후보 풀</span><span class="v">${all.length.toLocaleString()}</span><span class="sub">이 프로필 채굴분 ${mine.length}</span></div>
+    </div>
+    <p class="hint">① 워치리스트의 「전수 스캔」은 <b>이미 고른 채널</b>의 영상을 보는 단계입니다. 채널이 0개면 볼 게 없어 여기로 보냅니다. 아래 순서대로 채널을 먼저 채우세요.</p>
     ${minePath
-      ? `<p class="lead">후보 풀에 ${all.length.toLocaleString()}채널이 있지만 <b>이 프로필로 모은 건 ${mine.length}개</b>뿐입니다.
-         나머지는 다른 주제로 모은 채널이라 2단계 정밀 조사(채널당 2유닛)를 돌려도 대부분 주제 불일치로 걸러집니다.
+      ? `<p class="lead">${all.length===0
+           ? `후보 풀이 <b>완전히 비어 있습니다.</b> 재선별은 이미 모아 둔 채널을 거르는 단계라 지금은 할 게 없습니다. (v3를 쓰던 주소·브라우저가 아니면 v3 채널이 여기 없습니다 — 있다면 아래 「📦 후보 풀 원본 → ↺ v3 채널 다시 가져오기」)`
+           : `후보 풀에 ${all.length.toLocaleString()}채널이 있지만 <b>이 프로필로 모은 건 ${mine.length}개</b>뿐입니다. 나머지는 다른 주제로 모은 채널이라 2단계 정밀 조사(채널당 2유닛)를 돌려도 대부분 주제 불일치로 걸러집니다.`}
          <b>「2-B 채굴」부터 하세요.</b></p>
          <div class="howto"><div class="ht">첫날 순서 — 검색 40회 · 일반 약 1,300유닛</div><ol>
            <li>아래 <b>2-B 채굴</b> → 시드 <b>${shorts?'🛒 쇼핑·인기상품':'💰 투자·머니'}</b> / 키워드 <b>40개</b> / 정렬 <b>최신순</b> / 길이 <b>${shorts?'짧은 영상':'중간'}</b> / 기간 <b>${shorts?'30일':'90일'}</b></li>
@@ -2531,14 +2566,16 @@ function renderBootstrap(){
            <li>위 <b>1 · 승격 큐</b>에서 「차단 대상 일괄 제거」 → 「적합도 60 이상 일괄 승인」</li>
            <li>① 워치리스트 → 기간 <b>${shorts?'7일':'30일'}</b> → 전수 스캔</li>
            <li>다음 날부터 채굴 20회씩 추가해 ${shorts?'200~300':'500~700'}채널까지 키웁니다</li>
-         </ol></div>`
+         </ol></div>
+         <div class="row" style="margin-top:14px"><button class="btn btn-arc" onclick="scrollToEl('mineCard')">⛏ 2-B 채굴로 이동</button></div>`
       : `<p class="lead">후보 풀에 <b>${all.length.toLocaleString()}채널</b>이 있습니다. <b>「2-A 재선별」부터 하세요</b> — 검색 쿼터를 쓰지 않고 이미 있는 채널에서 골라냅니다.</p>
          <div class="howto"><div class="ht">첫날 순서 — 검색 0회 · 일반 약 2,500유닛</div><ol>
            <li>아래 <b>2-A 재선별</b> → 조사 범위 <b>후보 풀 전체</b> / 2단계 <b>상위 1,200</b></li>
            <li>승격 큐에서 「차단 대상 일괄 제거」 → 「적합도 60 이상 일괄 승인」</li>
            <li>① 워치리스트 → 기간 <b>30일</b> → 전수 스캔</li>
            <li>부족하면 <b>2-B 채굴</b>로 보충</li>
-         </ol></div>`}`;
+         </ol></div>
+         <div class="row" style="margin-top:14px"><button class="btn btn-arc" onclick="scrollToEl('reCard')">⚗ 2-A 재선별로 이동</button></div>`}`;
 }
 /* 채굴·연결 확장으로 찾은 채널을 큐에 올리기 전에 업로드 50개를 실제로 본다.
    v4.3까지는 이 단계가 재선별에만 있었다 — 채굴 채널은 재편집·주제·형태 비율이
@@ -2644,8 +2681,9 @@ async function reselect(){
   if(scope==='mine')ids=ids.filter(id=>POOL[id]?.pid===PID);
   if(!ids.length){
     showErr(scope==='mine'
-      ? '이 프로필로 채굴한 채널이 아직 없습니다. 아래 「2-B 채굴」부터 하세요.'
-      : '후보 풀이 비어 있습니다. 채굴하거나 v3 백업 JSON을 가져오세요.');
+      ? `${P().emoji} ${P().name} 프로필로 채굴한 채널이 아직 없어 재선별할 게 없습니다. 재선별은 '이미 모아 둔 채널'을 거르는 단계입니다 — 아래 「2-B 채굴」로 먼저 채널을 찾으세요.`
+      : `후보 풀이 비어 있어 재선별할 게 없습니다. 재선별은 '이미 모아 둔 채널'을 거르는 단계입니다 — 아래 「2-B 채굴」로 먼저 채널을 찾거나, v3 백업 JSON이 있으면 「📦 후보 풀 원본」에서 가져오세요.`);
+    setTimeout(()=>scrollToEl('mineCard'),150);
     return;
   }
   const [lo,hi]=document.getElementById('reSubs').value.split(',').map(Number);
